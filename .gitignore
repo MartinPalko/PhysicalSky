@@ -2,5 +2,10 @@
 /Temp
 *.sln
 *.csproj
-/Assets/DefaultShaders.meta
 /Assets/DefaultShaders
+/Assets/DefaultShaders.meta
+/Assets/Standard Assets
+/Assets/Standard Assets.meta
+/Assets/Test
+/Assets/Test.meta
+
