@@ -15,6 +15,9 @@ public class AtmosphereModel : MonoBehaviour
     const double kLambdaG = 550.0;
     const double kLambdaB = 440.0;
 
+    // TODO: Try changing to half or double
+    const RenderTextureFormat LUT_FORMAT = RenderTextureFormat.ARGBFloat;
+
     // Same as defined in PhysicalSkyCommon
     const int TRANSMITTANCE_TEXTURE_WIDTH = 256;
     const int TRANSMITTANCE_TEXTURE_HEIGHT = 64;
@@ -27,6 +30,19 @@ public class AtmosphereModel : MonoBehaviour
     const int SCATTERING_TEXTURE_DEPTH = SCATTERING_TEXTURE_R_SIZE;
     const int IRRADIANCE_TEXTURE_WIDTH = 64;
     const int IRRADIANCE_TEXTURE_HEIGHT = 16;
+
+    // TODO: Make customizable?
+    const int NUM_SCATTERING_ORDERS = 4;
+
+    enum PrecomputePass
+    {
+        Transmittance = 0,
+        DirectIrradiance = 1,
+        SingleScattering = 2,
+        ScatteringDensity = 3,
+        IndirectIrradiance = 4,
+        MultipleScattering = 5
+    }
 
     const int kLambdaMin = 360;
     const int kLambdaMax = 830;
@@ -75,6 +91,12 @@ public class AtmosphereModel : MonoBehaviour
     public RenderTexture irradianceLUT = null;
     public RenderTexture IrradianceLUT { get { return irradianceLUT; } }
 
+    // TODO: Remove when done testing
+    public RenderTexture DeltaIrradianceTexture;
+    public RenderTexture DeltaRayleighScatteringTexture;
+    public RenderTexture DeltaMieScatteringTexture;
+    public RenderTexture DeltaScatteringDensityTexture;
+
     private double Interpolate(List<double> wavelengths, List<double> wavelength_function, double wavelength)
     {
         Debug.Assert(wavelength_function.Count == wavelengths.Count);
@@ -107,7 +129,7 @@ public class AtmosphereModel : MonoBehaviour
     void AllocateLookupTextures()
     {
         if (!transmittanceLUT)
-            transmittanceLUT = new RenderTexture(TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT, 0, RenderTextureFormat.ARGBHalf);
+            transmittanceLUT = new RenderTexture(TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT, 0, LUT_FORMAT);
         if (!transmittanceLUT.IsCreated())
         {
             transmittanceLUT.useMipMap = false;
@@ -115,7 +137,7 @@ public class AtmosphereModel : MonoBehaviour
         }
 
         if (!scatteringLUT)
-            scatteringLUT = new RenderTexture(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, 0, RenderTextureFormat.ARGB32);
+            scatteringLUT = new RenderTexture(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, 0, LUT_FORMAT);
         if (!scatteringLUT.IsCreated())
         {
             scatteringLUT.volumeDepth = SCATTERING_TEXTURE_DEPTH;
@@ -126,7 +148,7 @@ public class AtmosphereModel : MonoBehaviour
         }
 
         if (!irradianceLUT)
-            irradianceLUT = new RenderTexture(IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT, 0, RenderTextureFormat.ARGBHalf);
+            irradianceLUT = new RenderTexture(IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT, 0, LUT_FORMAT);
         if (!irradianceLUT.IsCreated())
         {
             irradianceLUT.useMipMap = false;
@@ -136,13 +158,13 @@ public class AtmosphereModel : MonoBehaviour
 
     public void ComputeLookupTextures()
     {
+        float timerStartCompute = Time.realtimeSinceStartup;
+
         if (SystemInfo.graphicsShaderLevel < 50)
         {
             Debug.LogError("Computing atmospheric lookup textures requires shader model 5.0 or higher!");
             return;
         }
-
-        AllocateLookupTextures();
 
         wavelengths.Clear();
         solar_irradiance.Clear();
@@ -156,14 +178,12 @@ public class AtmosphereModel : MonoBehaviour
             double lambda = (double)l * 1e-3;  // micro-meters
             double mie = kMieAngstromBeta / kMieScaleHeight * Math.Pow(lambda, -kMieAngstromAlpha);
             wavelengths.Add(l);
+
             if (use_constant_solar_spectrum_)
-            {
                 solar_irradiance.Add(kConstantSolarIrradiance);
-            }
             else
-            {
                 solar_irradiance.Add(kSolarIrradiance[(l - kLambdaMin) / 10]);
-            }
+
             rayleigh_scattering.Add(kRayleigh * Math.Pow(lambda, -4));
             mie_scattering.Add(mie * kMieSingleScatteringAlbedo);
             mie_extinction.Add(mie);
@@ -189,27 +209,90 @@ public class AtmosphereModel : MonoBehaviour
         PrecomputeMaterial.SetVector("_ground_albedo", ScaleToWavelengths(ground_albedo, 1.0));
         PrecomputeMaterial.SetFloat("_mu_s_min", (float)Math.Cos(kMaxSunZenithAngle));
 
+        /*RenderTexture*/ DeltaIrradianceTexture = new RenderTexture(IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
+        DeltaIrradianceTexture.useMipMap = false;
+        DeltaIrradianceTexture.enableRandomWrite = true;
+        DeltaIrradianceTexture.Create();
+
+        /*RenderTexture*/ DeltaRayleighScatteringTexture = new RenderTexture(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
+        DeltaRayleighScatteringTexture.volumeDepth = SCATTERING_TEXTURE_DEPTH;
+        DeltaRayleighScatteringTexture.useMipMap = false;
+        DeltaRayleighScatteringTexture.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
+        DeltaRayleighScatteringTexture.enableRandomWrite = true;
+        DeltaRayleighScatteringTexture.Create();
+
+        /*RenderTexture*/ DeltaMieScatteringTexture = new RenderTexture(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
+        DeltaMieScatteringTexture.volumeDepth = SCATTERING_TEXTURE_DEPTH;
+        DeltaMieScatteringTexture.useMipMap = false;
+        DeltaMieScatteringTexture.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
+        DeltaMieScatteringTexture.enableRandomWrite = true;
+        DeltaMieScatteringTexture.Create();
+
+        /*RenderTexture*/ DeltaScatteringDensityTexture = new RenderTexture(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
+        DeltaScatteringDensityTexture.volumeDepth = SCATTERING_TEXTURE_DEPTH;
+        DeltaScatteringDensityTexture.useMipMap = false;
+        DeltaScatteringDensityTexture.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
+        DeltaScatteringDensityTexture.enableRandomWrite = true;
+        DeltaScatteringDensityTexture.Create();
+
+        RenderTexture DeltaMultipleScatteringTexture = DeltaRayleighScatteringTexture;
+
+        // Allocate final lookup textures
+        AllocateLookupTextures();
+
         // Compute Transmittance LUT
-        PrecomputeMaterial.EnableKeyword(TransmittanceKeyword);
-        Graphics.Blit(transmittanceLUT, transmittanceLUT, PrecomputeMaterial);
-        PrecomputeMaterial.DisableKeyword(TransmittanceKeyword);
+        Graphics.Blit(transmittanceLUT, transmittanceLUT, PrecomputeMaterial, (int)PrecomputePass.Transmittance);
+        PrecomputeMaterial.SetTexture("transmittance_texture", transmittanceLUT); // Set for subsequent shaders to read
 
-        // Compute Scattering LUT
-        PrecomputeMaterial.EnableKeyword(ScatteringKeyword);
+        // Compute Direct Irradiance into DeltaIrradianceTexture and Initialize irradianceLUT with 0
         Graphics.ClearRandomWriteTargets();
-        Graphics.SetRandomWriteTarget(1, scatteringLUT);
-        PrecomputeMaterial.SetFloat("_volumeDepth", SCATTERING_TEXTURE_DEPTH);
-        RenderTexture dummy = RenderTexture.GetTemporary(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, 0, RenderTextureFormat.R8);
-        Graphics.Blit(dummy, dummy, PrecomputeMaterial);
+        Graphics.SetRandomWriteTarget(1, DeltaIrradianceTexture);
+        Graphics.Blit(irradianceLUT, irradianceLUT, PrecomputeMaterial, (int)PrecomputePass.DirectIrradiance);
+
+        // Compute Raylie and Mie Single Scattering and store them in DeltaRayleighScatteringTexture, DeltaMieScatteringTexture as well as scatteringLUT
         Graphics.ClearRandomWriteTargets();
+        Graphics.SetRandomWriteTarget(1, DeltaRayleighScatteringTexture);
+        Graphics.SetRandomWriteTarget(2, DeltaMieScatteringTexture);
+        Graphics.SetRandomWriteTarget(3, scatteringLUT);
+        PrecomputeMaterial.SetTexture("transmittance_texture", transmittanceLUT);
+        {
+            RenderTexture dummy = RenderTexture.GetTemporary(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, 0, RenderTextureFormat.R8);
+            Graphics.Blit(dummy, dummy, PrecomputeMaterial, (int)PrecomputePass.SingleScattering);
+            RenderTexture.ReleaseTemporary(dummy);
+        }
         RenderTexture.active = null;
-        RenderTexture.ReleaseTemporary(dummy);
-        PrecomputeMaterial.DisableKeyword(ScatteringKeyword);
+        
+        // Compute the scattering density, and store it in DeltaScatteringDensityTexture
+        Graphics.ClearRandomWriteTargets();
+        Graphics.SetRandomWriteTarget(1, DeltaScatteringDensityTexture);
+        PrecomputeMaterial.SetTexture("single_rayleigh_scattering_texture", DeltaRayleighScatteringTexture);
+        PrecomputeMaterial.SetTexture("single_mie_scattering_texture", DeltaMieScatteringTexture);
+        PrecomputeMaterial.SetTexture("multiple_scattering_texture", DeltaMultipleScatteringTexture);
+        PrecomputeMaterial.SetTexture("irradiance_texture", DeltaIrradianceTexture);        
+        for (int scatteringOrder = 2; scatteringOrder <= NUM_SCATTERING_ORDERS; ++scatteringOrder)
+        {
+            //Compute to the nth order of scattering, in sequence
+            PrecomputeMaterial.SetInt("scattering_order", scatteringOrder);
+            {
+                RenderTexture dummy = RenderTexture.GetTemporary(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, 0, RenderTextureFormat.R8);
+                Graphics.Blit(dummy, dummy, PrecomputeMaterial, (int)PrecomputePass.ScatteringDensity);
+                RenderTexture.ReleaseTemporary(dummy);
+            }
+        }
 
-        // Compute Irradiance LUT
-        PrecomputeMaterial.EnableKeyword(IrradianceKeyword);
-        Graphics.Blit(irradianceLUT, irradianceLUT, PrecomputeMaterial);
-        PrecomputeMaterial.DisableKeyword(IrradianceKeyword);
+
+        Graphics.ClearRandomWriteTargets();
+
+        // Release temporary textures.
+        RenderTexture.active = null;
+        // TODO: Release temporary textures! (After done debugging)
+        //DeltaIrradianceTexture.Release();
+        //DeltaRayleighScatteringTexture.Release();
+        //DeltaMieScatteringTexture.Release();
+        //DeltaScatteringDensityTexture.Release();
+
+        float timerEndCompute = Time.realtimeSinceStartup;
+        Debug.Log("Computed atmospheric lookup textures in " + timerEndCompute * 1000.0f + "ms");
     }
 
     void ReleaseLookupTextures()

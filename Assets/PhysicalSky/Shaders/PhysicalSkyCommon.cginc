@@ -319,10 +319,10 @@ void GetRMuFromTransmittanceTextureUv(in AtmosphereParameters atmosphere, in flo
 DimensionlessSpectrum ComputeTransmittanceToTopAtmosphereBoundaryTexture(in AtmosphereParameters atmosphere, in float2 gl_frag_coord)
 {
 	// Don't have to scale by texture size, since we now just pass in normalized values.
-	//const float2 TRANSMITTANCE_TEXTURE_SIZE =	float2(TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT);
+	const float2 TRANSMITTANCE_TEXTURE_SIZE =	float2(TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT);
 	Length r;
 	Number mu;
-	GetRMuFromTransmittanceTextureUv(atmosphere, gl_frag_coord /*/ TRANSMITTANCE_TEXTURE_SIZE*/, r, mu);
+	GetRMuFromTransmittanceTextureUv(atmosphere, gl_frag_coord / TRANSMITTANCE_TEXTURE_SIZE, r, mu);
 	return ComputeTransmittanceToTopAtmosphereBoundary(atmosphere, r, mu);
 }
 
@@ -330,7 +330,7 @@ DimensionlessSpectrum GetTransmittanceToTopAtmosphereBoundary(in AtmosphereParam
 {
 	//assert(r >= atmosphere.bottom_radius && r <= atmosphere.top_radius);
 	float2 uv = GetTransmittanceTextureUvFromRMu(atmosphere, r, mu);
-	return DimensionlessSpectrum(tex2D(transmittance_texture, uv).rgb);
+	return DimensionlessSpectrum(tex2Dlod(transmittance_texture, float4(uv, 0, 0)).rgb);
 }
 
 DimensionlessSpectrum GetTransmittance(in AtmosphereParameters atmosphere, in TransmittanceTexture transmittance_texture, Length r, Number mu, Length d, bool ray_r_mu_intersects_ground) 
@@ -611,8 +611,8 @@ AbstractSpectrum GetScattering(
 		uvwz.z, uvwz.w);
 	float3 uvw1 = float3((tex_x + 1.0 + uvwz.y) / Number(SCATTERING_TEXTURE_NU_SIZE),
 		uvwz.z, uvwz.w);
-	return AbstractSpectrum(tex3D(scattering_texture, uvw0).rgb * (1.0 - lerp) +
-		tex3D(scattering_texture, uvw1).rgb * lerp);
+	return AbstractSpectrum(tex3Dlod(scattering_texture, float4(uvw0, 0)).rgb * (1.0 - lerp) +
+		tex3Dlod(scattering_texture, float4(uvw1, 0)).rgb * lerp);
 }
 
 RadianceSpectrum GetScattering(
@@ -947,7 +947,7 @@ IrradianceSpectrum GetIrradiance(
 	Length r, Number mu_s) 
 {
 	float2 uv = GetIrradianceTextureUvFromRMuS(atmosphere, r, mu_s);
-	return IrradianceSpectrum(tex2D(irradiance_texture, uv).rgb);
+	return IrradianceSpectrum(tex2Dlod(irradiance_texture, float4(uv, 0, 0)).rgb);
 }
 
 #ifdef COMBINED_SCATTERING_TEXTURES
@@ -977,14 +977,14 @@ IrradianceSpectrum GetCombinedScattering(
 	float3 uvw0 = float3((tex_x + uvwz.y) / Number(SCATTERING_TEXTURE_NU_SIZE),	uvwz.z, uvwz.w);
 	float3 uvw1 = float3((tex_x + 1.0 + uvwz.y) / Number(SCATTERING_TEXTURE_NU_SIZE), uvwz.z, uvwz.w);
 #ifdef COMBINED_SCATTERING_TEXTURES
-	float4 combined_scattering = tex3D(scattering_texture, uvw0) * (1.0 - lerp) + tex3D(scattering_texture, uvw1) * lerp;
+	float4 combined_scattering = tex3Dlod(scattering_texture, float4(uvw0, 0)) * (1.0 - lerp) + tex3Dlod(scattering_texture, float4(uvw1, 0)) * lerp;
 	IrradianceSpectrum scattering = IrradianceSpectrum(combined_scattering);
 	single_mie_scattering = GetExtrapolatedSingleMieScattering(atmosphere, combined_scattering);
 #else
 	IrradianceSpectrum scattering = IrradianceSpectrum(
-		tex3D(scattering_texture, uvw0).rgb * (1.0 - lerp) + tex3D(scattering_texture, uvw1).rgb * lerp);
+		tex3Dlod(scattering_texture, float4(uvw0, 0)).rgb * (1.0 - lerp) + tex3Dlod(scattering_texture, float4(uvw1, 0)).rgb * lerp);
 	single_mie_scattering = IrradianceSpectrum(
-		tex3D(single_mie_scattering_texture, uvw0).rgb * (1.0 - lerp) + tex3D(single_mie_scattering_texture, uvw1).rgb * lerp);
+		tex3Dlod(single_mie_scattering_texture, float4(uvw0, 0)).rgb * (1.0 - lerp) + tex3Dlod(single_mie_scattering_texture, float4(uvw1, 0)).rgb * lerp);
 #endif
 	return scattering;
 }
