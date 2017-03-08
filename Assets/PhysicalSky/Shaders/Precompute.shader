@@ -76,16 +76,16 @@
 			{
 				AtmosphereParameters params = GetAtmosphereParameters();
 
-				int zz;
-				for (zz = 0; zz < SCATTERING_TEXTURE_DEPTH; zz++)
+				int layer;
+				for (layer = 0; layer < SCATTERING_TEXTURE_DEPTH; layer++)
 				{
-					float3 uvw = float3(i.pos.xy, zz + 0.5);
+					float3 uvw = float3(i.pos.xy, layer + 0.5);
 					float3 outRayleigh;
 					float3 outMie;
 
 					ComputeSingleScatteringTexture(params, transmittance_texture, uvw, outRayleigh, outMie);					
 
-					int3 index = int3(i.pos.xy, zz);
+					int3 index = int3(i.pos.xy, layer);
 					delta_rayleigh[index] = float4(outRayleigh, 1);
 					delta_mie[index] = float4(outMie, 1);
 					scattering[index] = float4(delta_rayleigh[index].rgb, delta_mie[index].r);
@@ -121,10 +121,10 @@
 			{
 				AtmosphereParameters params = GetAtmosphereParameters();
 
-				int zz;
-				for (zz = 0; zz < SCATTERING_TEXTURE_DEPTH; zz++)
+				int layer;
+				for (layer = 0; layer < SCATTERING_TEXTURE_DEPTH; layer++)
 				{
-					float3 uvw = float3(i.pos.xy, zz + 0.5);
+					float3 uvw = float3(i.pos.xy, layer + 0.5);
 
 					float3 scatteringDensityResult = ComputeScatteringDensityTexture(
 						params,
@@ -136,10 +136,13 @@
 						uvw,
 						scattering_order);
 
-					// For debugging
+					//// For debugging
+					//scatteringDensityResult = scatteringDensityResult.r == 0 ? float3(0, 1, 0) : float3(1, 0, 0);
 					//scatteringDensityResult = float3(scattering_order == 2 ? 1 : 0, scattering_order == 3 ? 1 : 0, scattering_order == 4 ? 1 : 0);
-
-					int3 index = int3(i.pos.xy, zz);
+					//scatteringDensityResult = tex3Dlod(single_rayleigh_scattering_texture, float4(uvw / float3(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, SCATTERING_TEXTURE_DEPTH), 0)).rgb;
+					//scatteringDensityResult = tex2Dlod(transmittance_texture, float4(i.uv, 0, 0)).rgb;
+					
+					int3 index = int3(i.pos.xy, layer);
 					scattering_density[index] = float4(scatteringDensityResult, 1);
 				}
 				discard;
@@ -160,21 +163,30 @@
 			#include "PhysicalSkyCommon.cginc"
 			#include "AtmosphereUniforms.cginc"
 
-			RWTexture3D<float4> volumeTarget;
+			RWTexture2D<float4> delta_irradiance;
+			RWTexture2D<float4> irradiance;
+
+			uniform sampler3D single_rayleigh_scattering_texture;
+			uniform sampler3D single_mie_scattering_texture;
+			uniform sampler3D multiple_scattering_texture;
+			uniform int scattering_order;
 
 			fixed4 frag (v2f_img i) : COLOR
 			{
 				AtmosphereParameters params = GetAtmosphereParameters();
 
-				int zz;
-				for (zz = 0; zz < SCATTERING_TEXTURE_DEPTH; zz++)
-				{
-					float3 pixel = float3(i.pos.xy, zz);
+				int2 index = i.pos.xy;
+				float3 irradianceResult = ComputeIndirectIrradianceTexture(
+					params,
+					single_rayleigh_scattering_texture,
+					single_mie_scattering_texture,
+					multiple_scattering_texture,
+					i.pos.xy,
+					scattering_order - 1);
 
-					float4 result = 0; // TODO
+				delta_irradiance[index] += float4(irradianceResult, 0);
+				irradiance[index] += float4(irradianceResult, 0);
 
-					volumeTarget[int3(i.pos.xy, zz)] = result;
-				}
 				discard;
 				return 0;
 			}
@@ -193,20 +205,32 @@
 			#include "PhysicalSkyCommon.cginc"
 			#include "AtmosphereUniforms.cginc"
 
-			RWTexture3D<float4> volumeTarget;
+			RWTexture3D<float4> delta_multiple_scattering;
+			RWTexture3D<float4> scattering;
+
+			uniform sampler2D transmittance_texture;
+			uniform sampler3D scattering_density_texture;
 
 			fixed4 frag (v2f_img i) : COLOR
 			{
 				AtmosphereParameters params = GetAtmosphereParameters();
 
-				int zz;
-				for (zz = 0; zz < SCATTERING_TEXTURE_DEPTH; zz++)
+				int layer;
+				for (layer = 0; layer < SCATTERING_TEXTURE_DEPTH; layer++)
 				{
-					float3 pixel = float3(i.pos.xy, zz);
+					float3 uvw = float3(i.pos.xy, layer + 0.5);
+					int3 index = int3(i.pos.xy, layer);
 
-					float4 result = 0; // TODO
+					float nu;
+					float3 deltaMultipleScatteringResult = ComputeMultipleScatteringTexture(
+						params,
+						transmittance_texture,
+						scattering_density_texture,
+						uvw,
+						nu);
 
-					volumeTarget[int3(i.pos.xy, zz)] = result;
+					delta_multiple_scattering[index] += float4(deltaMultipleScatteringResult, 0);
+					scattering[index] += float4(deltaMultipleScatteringResult / RayleighPhaseFunction(nu), 0.0);
 				}
 				discard;
 				return 0;
