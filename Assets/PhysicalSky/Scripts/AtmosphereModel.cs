@@ -1,12 +1,9 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Rendering;
 using System;
 
-using System.Threading;
-
-public class AtmosphereModel : MonoBehaviour
+[CreateAssetMenu(fileName = "NewAtmosphereModel", menuName = "AtmosphereModel")]
+public class AtmosphereModel : ScriptableObject
 {
     bool use_constant_solar_spectrum_ = false;
 
@@ -81,6 +78,7 @@ public class AtmosphereModel : MonoBehaviour
     private List<double> mie_extinction = new List<double>();
     private List<double> ground_albedo = new List<double>();
 
+    [SerializeField][HideInInspector]
     public Shader PrecomputeShader = null;
     private Material PrecomputeMaterial = null;
 
@@ -125,11 +123,10 @@ public class AtmosphereModel : MonoBehaviour
             (float)(Interpolate(wavelengths, v, kLambdaR) * scale),
             (float)(Interpolate(wavelengths, v, kLambdaG) * scale),
             (float)(Interpolate(wavelengths, v, kLambdaB) * scale),
-            1.0f
-            );
+            1.0f);
     }
 
-    void AllocateLookupTextures()
+    public void AllocateLookupTextures()
     {
         if (!transmittanceLUT)
             transmittanceLUT = new RenderTexture(TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT, 0, LUT_FORMAT);
@@ -159,16 +156,32 @@ public class AtmosphereModel : MonoBehaviour
         }
     }    
 
-    void Blit(RenderTexture dest, Material mat, int pass)
+    private void Blit(RenderTexture dest, Material mat, int pass)
     {
         Graphics.Blit(null, dest, mat, pass);
     }
 
-    void BlitWithDummy(Material mat, int pass, int width, int height)
+    private void BlitWithDummy(Material mat, int pass, int width, int height)
     {
         RenderTexture dummy = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.R8);
         Blit(dummy, mat, pass);
         RenderTexture.ReleaseTemporary(dummy);
+    }
+
+    public void SetAtmosphereUniforms(Material mat)
+    {
+        mat.SetVector("_solar_irradiance", ScaleToWavelengths(solar_irradiance, 1.0));
+        mat.SetFloat("_sun_angular_radius", (float)kSunAngularRadius);
+        mat.SetFloat("_bottom_radius", (float)(kBottomRadius / kLengthUnitInMeters));
+        mat.SetFloat("_top_radius", (float)(kTopRadius / kLengthUnitInMeters));
+        mat.SetFloat("_rayleigh_scale_height", (float)(kRayleighScaleHeight / kLengthUnitInMeters));
+        mat.SetVector("_rayleigh_scattering", ScaleToWavelengths(rayleigh_scattering, kLengthUnitInMeters));
+        mat.SetFloat("_mie_scale_height", (float)(kMieScaleHeight / kLengthUnitInMeters));
+        mat.SetVector("_mie_scattering", ScaleToWavelengths(mie_scattering, kLengthUnitInMeters));
+        mat.SetVector("_mie_extinction", ScaleToWavelengths(mie_extinction, kLengthUnitInMeters));
+        mat.SetFloat("_mie_phase_function_g", (float)kMiePhaseFunctionG);
+        mat.SetVector("_ground_albedo", ScaleToWavelengths(ground_albedo, 1.0));
+        mat.SetFloat("_mu_s_min", (float)Math.Cos(kMaxSunZenithAngle));
     }
 
     public void ComputeLookupTextures()
@@ -206,23 +219,9 @@ public class AtmosphereModel : MonoBehaviour
         }
 
         if (!PrecomputeMaterial)
-        {
             PrecomputeMaterial = new Material(PrecomputeShader);
-        }
 
-        // Set uniforms in shader
-        PrecomputeMaterial.SetVector("_solar_irradiance", ScaleToWavelengths(solar_irradiance, 1.0));
-        PrecomputeMaterial.SetFloat("_sun_angular_radius", (float)kSunAngularRadius);
-        PrecomputeMaterial.SetFloat("_bottom_radius", (float)(kBottomRadius / kLengthUnitInMeters));
-        PrecomputeMaterial.SetFloat("_top_radius", (float)(kTopRadius / kLengthUnitInMeters));
-        PrecomputeMaterial.SetFloat("_rayleigh_scale_height", (float)(kRayleighScaleHeight / kLengthUnitInMeters));
-        PrecomputeMaterial.SetVector("_rayleigh_scattering", ScaleToWavelengths(rayleigh_scattering, kLengthUnitInMeters));
-        PrecomputeMaterial.SetFloat("_mie_scale_height", (float)(kMieScaleHeight / kLengthUnitInMeters));
-        PrecomputeMaterial.SetVector("_mie_scattering", ScaleToWavelengths(mie_scattering, kLengthUnitInMeters));
-        PrecomputeMaterial.SetVector("_mie_extinction", ScaleToWavelengths(mie_extinction, kLengthUnitInMeters));
-        PrecomputeMaterial.SetFloat("_mie_phase_function_g", (float)kMiePhaseFunctionG);
-        PrecomputeMaterial.SetVector("_ground_albedo", ScaleToWavelengths(ground_albedo, 1.0));
-        PrecomputeMaterial.SetFloat("_mu_s_min", (float)Math.Cos(kMaxSunZenithAngle));
+        SetAtmosphereUniforms(PrecomputeMaterial);
 
         /*RenderTexture*/ DeltaIrradianceTexture = new RenderTexture(IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
         DeltaIrradianceTexture.useMipMap = false;

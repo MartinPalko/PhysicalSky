@@ -1,10 +1,18 @@
 fileFormatVersion: 2
 guid: 3ba4e1728e78faa45a91181e69388531
-timeCreated: 1488742806
+timeCreated: 1489248803
 licenseType: Free
 MonoImporter:
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - PrecomputeShader: {fileID: 4800000, guid: c3812fd1f0a67c140b33e41c8f9d4b81, type: 3}
+  - transmittanceLUT: {instanceID: 0}
+  - scatteringLUT: {instanceID: 0}
+  - irradianceLUT: {instanceID: 0}
+  - DeltaIrradianceTexture: {instanceID: 0}
+  - DeltaRayleighScatteringTexture: {instanceID: 0}
+  - DeltaMieScatteringTexture: {instanceID: 0}
+  - DeltaScatteringDensityTexture: {instanceID: 0}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

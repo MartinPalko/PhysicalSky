@@ -1,43 +1,65 @@
-﻿Shader "Custom/Atmosphere" {
-	Properties {
-		_Color ("Color", Color) = (1,1,1,1)
-		_MainTex ("Albedo (RGB)", 2D) = "white" {}
-		_Glossiness ("Smoothness", Range(0,1)) = 0.5
-		_Metallic ("Metallic", Range(0,1)) = 0.0
+﻿Shader "Custom/Atmosphere" 
+{
+	Properties 
+	{
 	}
-	SubShader {
-		Tags { "RenderType"="Opaque" }
-		LOD 200
-		
-		CGPROGRAM
-		// Physically based Standard lighting model, and enable shadows on all light types
-		#pragma surface surf Standard fullforwardshadows
+	SubShader 
+	{
+		Cull Off ZWrite Off ZTest LEqual Fog{ Mode Off }
 
-		// Use shader model 3.0 target, to get nicer looking lighting
-		#pragma target 3.0
-
-		sampler2D _MainTex;
-
-		struct Input 
+		Pass
 		{
-			float2 uv_MainTex;
-		};
+			CGPROGRAM
+			#pragma target 3.0
+			#pragma vertex vert
+			#pragma fragment frag
 
-		half _Glossiness;
-		half _Metallic;
-		fixed4 _Color;
+			#include "UnityCG.cginc"
+			#include "PhysicalSkyCommon.cginc"
+			#include "AtmosphereUniforms.cginc"
 
-		void surf (Input IN, inout SurfaceOutputStandard o) 
-		{
-			// Albedo comes from a texture tinted by color
-			fixed4 c = tex2D (_MainTex, IN.uv_MainTex) * _Color;
-			o.Albedo = c.rgb;
-			// Metallic and smoothness come from slider variables
-			o.Metallic = _Metallic;
-			o.Smoothness = _Glossiness;
-			o.Alpha = c.a;
+			struct appdata_t
+			{
+				float4 pos : POSITION;
+			};
+
+			struct v2f
+			{
+				float4 pos : SV_POSITION;
+				float4 view : TEXCOORD0;
+			};
+
+			float4 real_cam_pos;
+
+			v2f vert(appdata_t input)
+			{
+				v2f output;
+				output.view = mul(unity_ObjectToWorld, input.pos);
+				output.pos = input.pos;
+
+				// Put z value just on the far plane
+				if (UNITY_NEAR_CLIP_VALUE == -1)
+					output.pos.z = -1e-7; // Just below 0
+				else if (UNITY_NEAR_CLIP_VALUE == 1)
+					output.pos.z = 1e-7; // Just above 0
+				else
+					output.pos.z = 1 - 1e-7; // Just below 1
+
+				// Compensate for flipped projection matrix.
+				if (_ProjectionParams.x < 0)
+					output.pos.y *= -1;
+
+				return output;
+			}
+
+			half4 frag(v2f input) : COLOR
+			{
+				// For Debugging
+				return float4(normalize(input.view.rgb) * 0.5 + 0.5, 0);
+			}
+			ENDCG
 		}
-		ENDCG
+		
 	}
-	FallBack "Diffuse"
+	Fallback Off
 }
