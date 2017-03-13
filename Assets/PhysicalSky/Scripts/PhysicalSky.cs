@@ -5,13 +5,16 @@ using UnityEngine;
 public class PhysicalSky : MonoBehaviour
 {
     public AtmosphereModel atmosphereModel;
-    public GameObject previewMesh = null;
     
     private static Mesh quad = null;
+
+    public Light sunLight;
 
     [SerializeField][HideInInspector]
     public Shader skyShader;
     private Material skyMaterial;
+
+    public float altitude = 1.0f;
 
     private void Awake()
     {
@@ -36,7 +39,6 @@ public class PhysicalSky : MonoBehaviour
     private void Start()
     {
         skyMaterial = new Material(skyShader);
-        atmosphereModel.ComputeLookupTextures();
     }
 
     private void OnRenderObject()
@@ -44,9 +46,18 @@ public class PhysicalSky : MonoBehaviour
         const int pass = 0;
 
         atmosphereModel.SetAtmosphereUniforms(skyMaterial);
-        skyMaterial.SetTexture("transmittance_texture", atmosphereModel.transmittanceLUT);
-        skyMaterial.SetTexture("scattering_texture", atmosphereModel.scatteringLUT);
-        skyMaterial.SetTexture("irradiance_texture", atmosphereModel.irradianceLUT);
+        skyMaterial.SetTexture("transmittance_texture", atmosphereModel.TransmittanceLUT);
+        skyMaterial.SetTexture("scattering_texture", atmosphereModel.ScatteringLUT);
+        skyMaterial.SetTexture("irradiance_texture", atmosphereModel.IrradianceLUT);
+        
+        Vector3 sunDirection = -sunLight.transform.forward;
+        Vector3 sunRadiance = new Vector3(0.1f, 0.1f, 0.1f);
+        Vector3 sunSize = new Vector3(1.0f, 1.0f, 1.0f);
+
+        skyMaterial.SetVector("camera", new Vector3(0, (float)(atmosphereModel.kBottomRadius / AtmosphereModel.kLengthUnitInMeters) + altitude, 0));
+        skyMaterial.SetVector("sun_direction", sunDirection.normalized);
+        skyMaterial.SetVector("sun_radiance", sunRadiance);
+        skyMaterial.SetVector("sun_size", sunSize);
 
         if (skyMaterial.SetPass(pass))
         {

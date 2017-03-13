@@ -5,11 +5,10 @@ using System;
 [CreateAssetMenu(fileName = "NewAtmosphereModel", menuName = "AtmosphereModel")]
 public class AtmosphereModel : ScriptableObject
 {
-    bool use_constant_solar_spectrum_ = false;
+    [NonSerialized]
+    bool needsRecompute = true;
 
-    const string TransmittanceKeyword = "TRANSMITTANCE";
-    const string ScatteringKeyword = "SCATTERING";
-    const string IrradianceKeyword = "IRRADIANCE";
+    const bool use_constant_solar_spectrum_ = false;
 
     const double kLambdaR = 680.0;
     const double kLambdaG = 550.0;
@@ -46,6 +45,7 @@ public class AtmosphereModel : ScriptableObject
 
     const int kLambdaMin = 360;
     const int kLambdaMax = 830;
+    [NonSerialized]
     double[] kSolarIrradiance = {
     1.11776, 1.14259, 1.01249, 1.14716, 1.72765, 1.73054, 1.6887, 1.61253,
     1.91198, 2.03474, 2.02042, 2.02212, 1.93377, 1.95809, 1.91686, 1.8298,
@@ -56,8 +56,10 @@ public class AtmosphereModel : ScriptableObject
     };
 
     const double kSunAngularRadius = 0.00935 / 2.0;
+    [NonSerialized]
     double kSunSolidAngle = 2.0 * Math.PI * (1.0 - Math.Cos(kSunAngularRadius));
-    const double kLengthUnitInMeters = 1000.0;
+    public const double kLengthUnitInMeters = 1000.0;
+
     public double kConstantSolarIrradiance = 1.5;
     public double kBottomRadius = 6360000.0;
     public double kTopRadius = 6420000.0;
@@ -71,26 +73,59 @@ public class AtmosphereModel : ScriptableObject
     public double kGroundAlbedo = 0.1;
     public double kMaxSunZenithAngle = 102.0 / 180.0 * Mathf.PI;
 
+    [NonSerialized]
     private List<double> wavelengths = new List<double>();
+    [NonSerialized]
     private List<double> solar_irradiance = new List<double>();
+    [NonSerialized]
     private List<double> rayleigh_scattering = new List<double>();
+    [NonSerialized]
     private List<double> mie_scattering = new List<double>();
+    [NonSerialized]
     private List<double> mie_extinction = new List<double>();
+    [NonSerialized]
     private List<double> ground_albedo = new List<double>();
 
     [SerializeField][HideInInspector]
     public Shader PrecomputeShader = null;
+    [NonSerialized]
     private Material PrecomputeMaterial = null;
 
-    // TODO: Make varaibles private
-    public RenderTexture transmittanceLUT = null;
-    public RenderTexture TransmittanceLUT { get { return transmittanceLUT; } }
+    [NonSerialized]
+    private RenderTexture transmittanceLUT = null;
+    public RenderTexture TransmittanceLUT
+    {
+        get
+        {
+            if (needsRecompute)
+                ComputeLookupTextures();
+            return transmittanceLUT;
+        }
+    }
 
-    public RenderTexture scatteringLUT = null;
-    public RenderTexture ScatteringLUT { get { return scatteringLUT; } }
+    [NonSerialized]
+    private RenderTexture scatteringLUT = null;
+    public RenderTexture ScatteringLUT
+    {
+        get
+        {
+            if (needsRecompute)
+                ComputeLookupTextures();
+            return scatteringLUT;
+        }
+    }
 
-    public RenderTexture irradianceLUT = null;
-    public RenderTexture IrradianceLUT { get { return irradianceLUT; } }
+    [NonSerialized]
+    private RenderTexture irradianceLUT = null;
+    public RenderTexture IrradianceLUT
+    {
+        get
+        {
+            if (needsRecompute)
+                ComputeLookupTextures();
+            return irradianceLUT;
+        }
+    }
 
     // TODO: Remove when done testing
     public RenderTexture DeltaIrradianceTexture;
@@ -186,6 +221,7 @@ public class AtmosphereModel : ScriptableObject
 
     public void ComputeLookupTextures()
     {
+        Debug.Log("Computing LUT");
         float timerStartCompute = Time.realtimeSinceStartup;
 
         if (SystemInfo.graphicsShaderLevel < 50)
@@ -312,6 +348,7 @@ public class AtmosphereModel : ScriptableObject
 
         float timerEndCompute = Time.realtimeSinceStartup;
         Debug.Log("Computed atmospheric lookup textures in " + (timerEndCompute - timerStartCompute) * 1000.0f + "ms");
+        needsRecompute = false;
     }
 
     void ReleaseLookupTextures()
@@ -324,6 +361,11 @@ public class AtmosphereModel : ScriptableObject
 
         if (irradianceLUT && irradianceLUT.IsCreated())
             irradianceLUT.Release();
+    }
+
+    private void Awake()
+    {
+        needsRecompute = true;
     }
 
     private void OnDestroy()
