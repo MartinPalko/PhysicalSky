@@ -55,6 +55,8 @@
 * THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#define COMBINED_SCATTERING_TEXTURES
+
 #define TRANSMITTANCE_TEXTURE_WIDTH 256
 #define TRANSMITTANCE_TEXTURE_HEIGHT 64
 #define SCATTERING_TEXTURE_R_SIZE 32
@@ -121,29 +123,29 @@
 #define ScatteringDensityTexture sampler3D
 #define IrradianceTexture sampler2D
 
-const Length m = 1.0; // Meter
-const Wavelength nm = 1.0; // NanoMeter
-const Angle rad = 1.0; // Radian
-const SolidAngle sr = 1.0;	// Steradian
-const Power watt = 1.0; // Watt
-const LuminousPower lm = 1.0; // Lumen
+static const Length m = 1.0; // Meter
+static const Wavelength nm = 1.0; // NanoMeter
+static const Angle rad = 1.0; // Radian
+static const SolidAngle sr = 1.0;	// Steradian
+static const Power watt = 1.0; // Watt
+static const LuminousPower lm = 1.0; // Lumen
 
-const float PI = 3.14159265358979323846;
+static const float PI = 3.1415926535897932386;
 
-const Length km = 1000.0;
-const Area m2 = 1.0;
-const Volume m3 = 1.0;
-const Angle pi = 3.14159265358979323846;
-const Angle deg = 3.14159265358979323846 / 180.0;
-const Irradiance watt_per_square_meter = 1.0;
-const Radiance watt_per_square_meter_per_sr = 1.0;
-const SpectralIrradiance watt_per_square_meter_per_nm = 1.0;
-const SpectralRadiance watt_per_square_meter_per_sr_per_nm = 1.0;
-const SpectralRadianceDensity watt_per_cubic_meter_per_sr_per_nm = 1.0;
-const LuminousIntensity cd = 1.0;
-const LuminousIntensity kcd = 1000.0;
-const Luminance cd_per_square_meter = 1.0;
-const Luminance kcd_per_square_meter = 1000.0;
+static const Length km = 1000.0;
+static const Area m2 = 1.0;
+static const Volume m3 = 1.0;
+static const Angle pi = 3.14159265358979323846;
+static const Angle deg = 3.14159265358979323846 / 180.0;
+static const Irradiance watt_per_square_meter = 1.0;
+static const Radiance watt_per_square_meter_per_sr = 1.0;
+static const SpectralIrradiance watt_per_square_meter_per_nm = 1.0;
+static const SpectralRadiance watt_per_square_meter_per_sr_per_nm = 1.0;
+static const SpectralRadianceDensity watt_per_cubic_meter_per_sr_per_nm = 1.0;
+static const LuminousIntensity cd = 1.0;
+static const LuminousIntensity kcd = 1000.0;
+static const Luminance cd_per_square_meter = 1.0;
+static const Luminance kcd_per_square_meter = 1000.0;
 
 struct AtmosphereParameters 
 {
@@ -956,7 +958,7 @@ float3 GetExtrapolatedSingleMieScattering(
 {
 	if (scattering.r == 0.0) 
 	{
-		return float3(0.0);
+		return float3(0.0, 0.0, 0.0);
 	}
 	return scattering.rgb * scattering.a / scattering.r * (atmosphere.rayleigh_scattering.r / atmosphere.mie_scattering.r) * (atmosphere.mie_scattering / atmosphere.rayleigh_scattering);
 }
@@ -978,7 +980,7 @@ IrradianceSpectrum GetCombinedScattering(
 	float3 uvw1 = float3((tex_x + 1.0 + uvwz.y) / Number(SCATTERING_TEXTURE_NU_SIZE), uvwz.z, uvwz.w);
 #ifdef COMBINED_SCATTERING_TEXTURES
 	float4 combined_scattering = tex3Dlod(scattering_texture, float4(uvw0, 0)) * (1.0 - lerp) + tex3Dlod(scattering_texture, float4(uvw1, 0)) * lerp;
-	IrradianceSpectrum scattering = IrradianceSpectrum(combined_scattering);
+	IrradianceSpectrum scattering = IrradianceSpectrum(combined_scattering.rgb);
 	single_mie_scattering = GetExtrapolatedSingleMieScattering(atmosphere, combined_scattering);
 #else
 	IrradianceSpectrum scattering = IrradianceSpectrum(
