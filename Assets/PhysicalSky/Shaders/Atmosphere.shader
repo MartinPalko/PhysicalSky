@@ -71,14 +71,17 @@
 				AtmosphereParameters params = GetAtmosphereParameters();
 
 				float3 view_ray = normalize(input.view.xyz);
-
 				float lightshaft_fadein_hack = smoothstep(0.02, 0.04, dot(camera, sun_direction));
-
 				float shadow_length = 0.0;
 
 
 				float3 transmittance;
 				float3 radiance = GetSkyRadiance(params, transmittance_texture, scattering_texture, scattering_texture, camera, view_ray, shadow_length, sun_direction, transmittance);
+
+				if (dot(sun_direction, view_ray) > sun_size.y)
+				{
+					radiance += transmittance * sun_radiance;
+				}
 
 				float exposure = 10;
 				float white_point = 0.4;
