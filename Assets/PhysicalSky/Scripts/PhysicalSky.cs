@@ -39,6 +39,8 @@ public class PhysicalSky : MonoBehaviour
     private void Start()
     {
         skyMaterial = new Material(skyShader);
+
+        atmosphereModel.ComputeLookupTextures();
     }
 
     private void OnRenderObject()
@@ -51,13 +53,11 @@ public class PhysicalSky : MonoBehaviour
         skyMaterial.SetTexture("irradiance_texture", atmosphereModel.IrradianceLUT);
         
         Vector3 sunDirection = -sunLight.transform.forward;
-        Vector3 sunRadiance = new Vector3(0.1f, 0.1f, 0.1f);
+        Color sunRadiance = new Color(1.0f, 1.0f, 1.0f);
         Vector3 sunSize = new Vector3(1.0f, 1.0f, 1.0f);
 
-        skyMaterial.SetVector("camera", new Vector3(0, (float)(atmosphereModel.kBottomRadius / AtmosphereModel.kLengthUnitInMeters) + altitude, 0));
+        skyMaterial.SetVector("camera", new Vector3(0, (float)(atmosphereModel.PlanetaryRadius / 1000) + altitude, 0));
         skyMaterial.SetVector("sun_direction", sunDirection.normalized);
-        skyMaterial.SetVector("sun_radiance", sunRadiance);
-        skyMaterial.SetVector("sun_size", sunSize);
 
         if (skyMaterial.SetPass(pass))
         {

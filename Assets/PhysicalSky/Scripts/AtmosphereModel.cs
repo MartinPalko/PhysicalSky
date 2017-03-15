@@ -7,7 +7,74 @@ public class AtmosphereModel : ScriptableObject
 {
     [NonSerialized]
     bool needsRecompute = true;
+    [NonSerialized]
+    bool lookupTexturesDirty = true;
 
+    enum PrecomputePass
+    {
+        Transmittance = 0,
+        DirectIrradiance = 1,
+        SingleScattering = 2,
+        ScatteringDensity = 3,
+        IndirectIrradiance = 4,
+        MultipleScattering = 5
+    }    
+
+    // Externally visible properties
+    public double SunRadius
+    {
+        get
+        {
+            return sunAngularRadius * Math.PI * 2.0;
+        }
+        set
+        {
+            sunAngularRadius = value / (Math.PI * 2.0);
+        }
+    }
+    
+    public double PlanetaryRadius
+    {
+        get
+        {
+            return bottomRadius;
+        }
+        set
+        {
+            double thickness = AtmosphereThickness;
+            bottomRadius = value;
+            AtmosphereThickness = thickness;
+        }
+    }
+    
+    public double AtmosphereThickness
+    {
+        get
+        {
+            return topRadius - bottomRadius;
+        }
+        set
+        {
+            topRadius = bottomRadius + Math.Max(value, 0);
+        }
+    }
+
+    // Internal variables; serialized and fed to shaders
+    [SerializeField] private double sunAngularRadius = 0.00872665;
+    [SerializeField] private double constantSolarIrradiance = 1.5;
+    [SerializeField] private double bottomRadius = 6360000.0;
+    [SerializeField] private double topRadius = 6420000.0;
+    [SerializeField] private double rayleigh = 1.24062e-6;
+    [SerializeField] private double rayleighScaleHeight = 8000.0;
+    [SerializeField] private double mieScaleHeight = 1200.0;
+    [SerializeField] private double mieAngstromAlpha = 0.0;
+    [SerializeField] private double mieAngstromBeta = 5.328e-3;
+    [SerializeField] private double mieSingleScatteringAlbedo = 0.9;
+    [SerializeField] private double miePhaseFunctionG = 0.8;
+    [SerializeField] private double groundAlbedo = 0.1;
+    [SerializeField] private double maxSunZenithAngle = 102.0 / 180.0 * Mathf.PI;
+
+    // Constants
     const bool use_constant_solar_spectrum_ = false;
 
     const double kLambdaR = 680.0;
@@ -32,17 +99,7 @@ public class AtmosphereModel : ScriptableObject
 
     // TODO: Make customizable?
     const int NUM_SCATTERING_ORDERS = 4;
-
-    enum PrecomputePass
-    {
-        Transmittance = 0,
-        DirectIrradiance = 1,
-        SingleScattering = 2,
-        ScatteringDensity = 3,
-        IndirectIrradiance = 4,
-        MultipleScattering = 5
-    }
-
+    const double kLengthUnitInMeters = 1000.0;
     const int kLambdaMin = 360;
     const int kLambdaMax = 830;
     [NonSerialized]
@@ -55,24 +112,9 @@ public class AtmosphereModel : ScriptableObject
     1.18737, 1.14683, 1.12362, 1.1058, 1.07124, 1.04992
     };
 
-    const double kSunAngularRadius = 0.00935 / 2.0;
+    // Computed values
     [NonSerialized]
-    double kSunSolidAngle = 2.0 * Math.PI * (1.0 - Math.Cos(kSunAngularRadius));
-    public const double kLengthUnitInMeters = 1000.0;
-
-    public double kConstantSolarIrradiance = 1.5;
-    public double kBottomRadius = 6360000.0;
-    public double kTopRadius = 6420000.0;
-    public double kRayleigh = 1.24062e-6;
-    public double kRayleighScaleHeight = 8000.0;
-    public double kMieScaleHeight = 1200.0;
-    public double kMieAngstromAlpha = 0.0;
-    public double kMieAngstromBeta = 5.328e-3;
-    public double kMieSingleScatteringAlbedo = 0.9;
-    public double kMiePhaseFunctionG = 0.8;
-    public double kGroundAlbedo = 0.1;
-    public double kMaxSunZenithAngle = 102.0 / 180.0 * Mathf.PI;
-
+    private double kSunSolidAngle;
     [NonSerialized]
     private List<double> wavelengths = new List<double>();
     [NonSerialized]
@@ -86,55 +128,28 @@ public class AtmosphereModel : ScriptableObject
     [NonSerialized]
     private List<double> ground_albedo = new List<double>();
 
-    [SerializeField][HideInInspector]
+    // Computed textures
+    [NonSerialized]
+    private RenderTexture transmittanceLUT = null;
+    public RenderTexture TransmittanceLUT { get { return transmittanceLUT; } }
+
+    [NonSerialized]
+    private RenderTexture scatteringLUT = null;
+    public RenderTexture ScatteringLUT { get { return scatteringLUT; } }
+
+    [NonSerialized]
+    private RenderTexture irradianceLUT = null;
+    public RenderTexture IrradianceLUT { get { return irradianceLUT; } }
+
+    // Shgader and material used for precompute
+    [SerializeField] [HideInInspector]
     public Shader PrecomputeShader = null;
     [NonSerialized]
     private Material PrecomputeMaterial = null;
 
-    [NonSerialized]
-    private RenderTexture transmittanceLUT = null;
-    public RenderTexture TransmittanceLUT
-    {
-        get
-        {
-            if (needsRecompute)
-                ComputeLookupTextures();
-            return transmittanceLUT;
-        }
-    }
-
-    [NonSerialized]
-    private RenderTexture scatteringLUT = null;
-    public RenderTexture ScatteringLUT
-    {
-        get
-        {
-            if (needsRecompute)
-                ComputeLookupTextures();
-            return scatteringLUT;
-        }
-    }
-
-    [NonSerialized]
-    private RenderTexture irradianceLUT = null;
-    public RenderTexture IrradianceLUT
-    {
-        get
-        {
-            if (needsRecompute)
-                ComputeLookupTextures();
-            return irradianceLUT;
-        }
-    }
-
-    // TODO: Remove when done testing
-    public RenderTexture DeltaIrradianceTexture;
-    public RenderTexture DeltaRayleighScatteringTexture;
-    public RenderTexture DeltaMieScatteringTexture;
-    public RenderTexture DeltaScatteringDensityTexture;
-
     private double Interpolate(List<double> wavelengths, List<double> wavelength_function, double wavelength)
     {
+        Debug.Assert(wavelengths.Count > 0);
         Debug.Assert(wavelength_function.Count == wavelengths.Count);
 
         if (wavelength < wavelengths[0])
@@ -206,17 +221,20 @@ public class AtmosphereModel : ScriptableObject
     public void SetAtmosphereUniforms(Material mat)
     {
         mat.SetVector("_solar_irradiance", ScaleToWavelengths(solar_irradiance, 1.0));
-        mat.SetFloat("_sun_angular_radius", (float)kSunAngularRadius);
-        mat.SetFloat("_bottom_radius", (float)(kBottomRadius / kLengthUnitInMeters));
-        mat.SetFloat("_top_radius", (float)(kTopRadius / kLengthUnitInMeters));
-        mat.SetFloat("_rayleigh_scale_height", (float)(kRayleighScaleHeight / kLengthUnitInMeters));
+        mat.SetFloat("_sun_angular_radius", (float)sunAngularRadius);
+        mat.SetFloat("_bottom_radius", (float)(bottomRadius / kLengthUnitInMeters));
+        mat.SetFloat("_top_radius", (float)(topRadius / kLengthUnitInMeters));
+        mat.SetFloat("_rayleigh_scale_height", (float)(rayleighScaleHeight / kLengthUnitInMeters));
         mat.SetVector("_rayleigh_scattering", ScaleToWavelengths(rayleigh_scattering, kLengthUnitInMeters));
-        mat.SetFloat("_mie_scale_height", (float)(kMieScaleHeight / kLengthUnitInMeters));
+        mat.SetFloat("_mie_scale_height", (float)(mieScaleHeight / kLengthUnitInMeters));
         mat.SetVector("_mie_scattering", ScaleToWavelengths(mie_scattering, kLengthUnitInMeters));
         mat.SetVector("_mie_extinction", ScaleToWavelengths(mie_extinction, kLengthUnitInMeters));
-        mat.SetFloat("_mie_phase_function_g", (float)kMiePhaseFunctionG);
+        mat.SetFloat("_mie_phase_function_g", (float)miePhaseFunctionG);
         mat.SetVector("_ground_albedo", ScaleToWavelengths(ground_albedo, 1.0));
-        mat.SetFloat("_mu_s_min", (float)Math.Cos(kMaxSunZenithAngle));
+        mat.SetFloat("_mu_s_min", (float)Math.Cos(maxSunZenithAngle));
+
+        mat.SetVector("sun_radiance", new Vector3((float)kSolarIrradiance[0], (float)kSolarIrradiance[1], (float)kSolarIrradiance[2]) / (float)kSunSolidAngle);
+        mat.SetVector("sun_size", new Vector3(Mathf.Tan((float)sunAngularRadius), Mathf.Cos((float)sunAngularRadius), (float)sunAngularRadius));
     }
 
     public void ComputeLookupTextures()
@@ -237,21 +255,23 @@ public class AtmosphereModel : ScriptableObject
         mie_extinction.Clear();
         ground_albedo.Clear();
 
+        kSunSolidAngle = Math.PI * sunAngularRadius * sunAngularRadius;
+
         for (int l = kLambdaMin; l <= kLambdaMax; l += 10)
         {
             double lambda = l * 1e-3;  // micro-meters
-            double mie = kMieAngstromBeta / kMieScaleHeight * Math.Pow(lambda, -kMieAngstromAlpha);
+            double mie = mieAngstromBeta / mieScaleHeight * Math.Pow(lambda, -mieAngstromAlpha);
             wavelengths.Add(l);
 
             if (use_constant_solar_spectrum_)
-                solar_irradiance.Add(kConstantSolarIrradiance);
+                solar_irradiance.Add(constantSolarIrradiance);
             else
                 solar_irradiance.Add(kSolarIrradiance[(l - kLambdaMin) / 10]);
 
-            rayleigh_scattering.Add(kRayleigh * Math.Pow(lambda, -4));
-            mie_scattering.Add(mie * kMieSingleScatteringAlbedo);
+            rayleigh_scattering.Add(rayleigh * Math.Pow(lambda, -4));
+            mie_scattering.Add(mie * mieSingleScatteringAlbedo);
             mie_extinction.Add(mie);
-            ground_albedo.Add(kGroundAlbedo);
+            ground_albedo.Add(groundAlbedo);
         }
 
         if (!PrecomputeMaterial)
@@ -259,26 +279,26 @@ public class AtmosphereModel : ScriptableObject
 
         SetAtmosphereUniforms(PrecomputeMaterial);
 
-        /*RenderTexture*/ DeltaIrradianceTexture = new RenderTexture(IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
+        RenderTexture DeltaIrradianceTexture = new RenderTexture(IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
         DeltaIrradianceTexture.useMipMap = false;
         DeltaIrradianceTexture.enableRandomWrite = true;
         DeltaIrradianceTexture.Create();
 
-        /*RenderTexture*/ DeltaRayleighScatteringTexture = new RenderTexture(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
+        RenderTexture DeltaRayleighScatteringTexture = new RenderTexture(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
         DeltaRayleighScatteringTexture.volumeDepth = SCATTERING_TEXTURE_DEPTH;
         DeltaRayleighScatteringTexture.useMipMap = false;
         DeltaRayleighScatteringTexture.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
         DeltaRayleighScatteringTexture.enableRandomWrite = true;
         DeltaRayleighScatteringTexture.Create();
 
-        /*RenderTexture*/ DeltaMieScatteringTexture = new RenderTexture(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
+        RenderTexture DeltaMieScatteringTexture = new RenderTexture(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
         DeltaMieScatteringTexture.volumeDepth = SCATTERING_TEXTURE_DEPTH;
         DeltaMieScatteringTexture.useMipMap = false;
         DeltaMieScatteringTexture.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
         DeltaMieScatteringTexture.enableRandomWrite = true;
         DeltaMieScatteringTexture.Create();
 
-        /*RenderTexture*/ DeltaScatteringDensityTexture = new RenderTexture(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
+        RenderTexture DeltaScatteringDensityTexture = new RenderTexture(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
         DeltaScatteringDensityTexture.volumeDepth = SCATTERING_TEXTURE_DEPTH;
         DeltaScatteringDensityTexture.useMipMap = false;
         DeltaScatteringDensityTexture.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
@@ -337,14 +357,13 @@ public class AtmosphereModel : ScriptableObject
         }
 
         Graphics.ClearRandomWriteTargets();
-
-        // Release temporary textures.
         RenderTexture.active = null;
-        // TODO: Release temporary textures! (After done debugging)
-        //DeltaIrradianceTexture.Release();
-        //DeltaRayleighScatteringTexture.Release();
-        //DeltaMieScatteringTexture.Release();
-        //DeltaScatteringDensityTexture.Release();
+        
+        // Release temporary textures.
+        DeltaIrradianceTexture.Release();
+        DeltaRayleighScatteringTexture.Release();
+        DeltaMieScatteringTexture.Release();
+        DeltaScatteringDensityTexture.Release();
 
         float timerEndCompute = Time.realtimeSinceStartup;
         Debug.Log("Computed atmospheric lookup textures in " + (timerEndCompute - timerStartCompute) * 1000.0f + "ms");
