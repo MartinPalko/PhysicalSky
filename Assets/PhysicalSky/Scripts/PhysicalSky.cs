@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System;
 using UnityEngine;
 
 public class PhysicalSky : MonoBehaviour
@@ -43,6 +42,25 @@ public class PhysicalSky : MonoBehaviour
         atmosphereModel.ComputeLookupTextures();
     }
 
+    DateTime currentTime = DateTime.Now - TimeSpan.FromHours(5); // Time in EST
+    double latitude = 45.5017 / (Math.PI * 2.0);
+    double longitude = 73.5673 / (Math.PI * 2.0);
+    Vector3 sunDirection;
+
+    private void Update()
+    {
+        // Slows down at sunrise/sunset, and speeds up overnight.
+        float sunSpeed = Mathf.Abs(sunDirection.y + 0.1f) * (sunDirection.y < -0.025f ? 10.0f : 1.0f) + 0.2f;
+        sunSpeed = 0;
+        currentTime = currentTime.AddHours(Time.deltaTime * sunSpeed);
+        double sunAltitude;
+        double sunAzimuth;
+        SunPosition.CalculateSunPosition(currentTime, latitude, longitude, out sunAltitude, out sunAzimuth);
+        CartesianCoords.SphericalToCartesian(1, (float)sunAzimuth, (float)sunAltitude, out sunDirection);
+        sunLight.transform.rotation = Quaternion.LookRotation(-sunDirection);
+        //Vector3 sunDirection = -sunLight.transform.forward;
+    }
+
     private void OnRenderObject()
     {
         const int pass = 0;
@@ -51,8 +69,8 @@ public class PhysicalSky : MonoBehaviour
         skyMaterial.SetTexture("transmittance_texture", atmosphereModel.TransmittanceLUT);
         skyMaterial.SetTexture("scattering_texture", atmosphereModel.ScatteringLUT);
         skyMaterial.SetTexture("irradiance_texture", atmosphereModel.IrradianceLUT);
+
         
-        Vector3 sunDirection = -sunLight.transform.forward;
         Color sunRadiance = new Color(1.0f, 1.0f, 1.0f);
         Vector3 sunSize = new Vector3(1.0f, 1.0f, 1.0f);
 
