@@ -1,5 +1,5 @@
-﻿using System;
-using UnityEngine;
+﻿using UnityEngine;
+using System;
 
 public class PhysicalSky : MonoBehaviour
 {
@@ -10,7 +10,14 @@ public class PhysicalSky : MonoBehaviour
     public Shader skyShader;
     private Material skyMaterial;
 
-    public float altitude = 1.0f;
+    // Serialized Fields.
+    [SerializeField]
+    private float altitude = 0.1f;
+    public float Altitude
+    {
+        get { return altitude; }
+        set { altitude = value; }
+    }    
 
     private void Start()
     {
@@ -26,6 +33,9 @@ public class PhysicalSky : MonoBehaviour
 
     private void Update()
     {
+        if (atmosphereModel.NeedsRecompute)
+            atmosphereModel.ComputeLookupTextures();
+
         //// Slows down at sunrise/sunset, and speeds up overnight.
         //float sunSpeed = Mathf.Abs(sunDirection.y + 0.1f) * (sunDirection.y < -0.025f ? 10.0f : 1.0f) + 0.2f;
         //sunSpeed = 0;

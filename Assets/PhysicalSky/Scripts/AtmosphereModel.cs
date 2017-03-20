@@ -5,11 +5,6 @@ using System;
 [CreateAssetMenu(fileName = "NewAtmosphereModel", menuName = "AtmosphereModel")]
 public class AtmosphereModel : ScriptableObject
 {
-    [NonSerialized]
-    bool needsRecompute = true;
-    [NonSerialized]
-    bool lookupTexturesDirty = true;
-
     enum PrecomputePass
     {
         Transmittance = 0,
@@ -18,70 +13,218 @@ public class AtmosphereModel : ScriptableObject
         ScatteringDensity = 3,
         IndirectIrradiance = 4,
         MultipleScattering = 5
-    }    
+    }
 
-    // Externally visible properties
-    public double SunRadius
+    [NonSerialized]
+    bool needsRecompute = true;
+    public bool NeedsRecompute { get { return needsRecompute; } }
+
+    [SerializeField]
+    private float constantSolarIrradiance = 1.5f;
+    public float ConstantSolarIrradiance
     {
-        get
-        {
-            return sunAngularRadius * Math.PI * 2.0;
-        }
+        get { return constantSolarIrradiance; }
         set
         {
-            sunAngularRadius = value / (Math.PI * 2.0);
+            if (constantSolarIrradiance != value)
+            {
+                constantSolarIrradiance = value;
+                needsRecompute = true;
+            }
         }
     }
-    
-    public double PlanetaryRadius
+
+    [SerializeField]
+    private float sunAngularRadius = 0.00872665f;
+    public float SunAngularRadius
+    {
+        get{ return sunAngularRadius; }
+        set
+        {
+            if (sunAngularRadius != value)
+            {                
+                sunAngularRadius = value;
+                needsRecompute = true;
+            }
+        }
+    }
+
+    [SerializeField]
+    private float planetaryRadius = 6360000.0f;
+    public float PlanetaryRadius
     {
         get
         {
-            return bottomRadius;
+            return planetaryRadius;
         }
         set
         {
-            double thickness = AtmosphereThickness;
-            bottomRadius = value;
+            float thickness = AtmosphereThickness;
+            planetaryRadius = value;
             AtmosphereThickness = thickness;
         }
     }
-    
-    public double AtmosphereThickness
+
+    [SerializeField]
+    private float atmosphereThickness = 60000.0f;
+    public float AtmosphereThickness
     {
-        get
-        {
-            return topRadius - bottomRadius;
-        }
+        get { return atmosphereThickness; }
         set
         {
-            topRadius = bottomRadius + Math.Max(value, 0);
+            float newValue = Math.Max(value, 0);
+            if (newValue != atmosphereThickness)
+            {
+                atmosphereThickness = newValue;
+                needsRecompute = true;
+            }
+
+        }
+    }    
+    
+    [SerializeField]
+    private float rayleigh = 1.24062e-6f;
+    public float Rayleigh
+    {
+        get { return rayleigh; }
+        set
+        {
+            if (rayleigh != value)
+            {
+                rayleigh = value;
+                needsRecompute = true;
+            }
         }
     }
 
-    // Internal variables; serialized and fed to shaders
-    [SerializeField] private double sunAngularRadius = 0.00872665;
-    [SerializeField] private double constantSolarIrradiance = 1.5;
-    [SerializeField] private double bottomRadius = 6360000.0;
-    [SerializeField] private double topRadius = 6420000.0;
-    [SerializeField] private double rayleigh = 1.24062e-6;
-    [SerializeField] private double rayleighScaleHeight = 8000.0;
-    [SerializeField] private double mieScaleHeight = 1200.0;
-    [SerializeField] private double mieAngstromAlpha = 0.0;
-    [SerializeField] private double mieAngstromBeta = 5.328e-3;
-    [SerializeField] private double mieSingleScatteringAlbedo = 0.9;
-    [SerializeField] private double miePhaseFunctionG = 0.8;
-    [SerializeField] private double groundAlbedo = 0.1;
-    [SerializeField] private double maxSunZenithAngle = 102.0 / 180.0 * Mathf.PI;
+    [SerializeField]
+    private float rayleighScaleHeight = 8000.0f;
+    public float RayleighScaleHeight
+    {
+        get { return rayleighScaleHeight; }
+        set
+        {
+            if (rayleighScaleHeight != value)
+            {
+                rayleighScaleHeight = value;
+                needsRecompute = true;
+            }
+        }
+    }
+
+    [SerializeField]
+    private float mieScaleHeight = 1200.0f;
+    public float MieScaleHeight
+    {
+        get { return mieScaleHeight; }
+        set
+        {
+            if (mieScaleHeight != value)
+            {
+                mieScaleHeight = value;
+                needsRecompute = true;
+            }
+        }
+    }
+
+    [SerializeField]
+    private float mieAngstromAlpha = 0.0f;
+    public float MieAngstromAlpha
+    {
+        get { return mieAngstromAlpha; }
+        set
+        {
+            if (mieAngstromAlpha != value)
+            {
+                mieAngstromAlpha = value;
+                needsRecompute = true;
+            }
+        }
+    }
+
+    [SerializeField]
+    private float mieAngstromBeta = 5.328e-3f;
+    public float MieAngstromBeta
+    {
+        get { return mieAngstromBeta; }
+        set
+        {
+            if (mieAngstromBeta != value)
+            {
+                mieAngstromBeta = value;
+                needsRecompute = true;
+            }
+        }
+    }
+
+    [SerializeField]
+    private float mieSingleScatteringAlbedo = 0.9f;
+    public float MieSingleScatteringAlbedo
+    {
+        get { return mieSingleScatteringAlbedo; }
+        set
+        {
+            if (mieSingleScatteringAlbedo != value)
+            {
+                mieSingleScatteringAlbedo = value;
+                needsRecompute = true;
+            }
+        }
+    }
+
+    [SerializeField]
+    private float miePhaseFunctionG = 0.8f;
+    public float MiePhaseFunctionG
+    {
+        get { return miePhaseFunctionG; }
+        set
+        {
+            if (miePhaseFunctionG != value)
+            {
+                miePhaseFunctionG = value;
+                needsRecompute = true;
+            }
+        }
+    }
+
+    [SerializeField]
+    private float groundAlbedo = 0.1f;
+    public float GroundAlbedo
+    {
+        get { return groundAlbedo; }
+        set
+        {
+            if (groundAlbedo != value)
+            {
+                groundAlbedo = value;
+                needsRecompute = true;
+            }
+        }
+    }
+
+    [SerializeField]
+    private float maxSunZenithAngle = 102.0f / 180.0f * Mathf.PI;
+    public float MaxSunZenithAngle
+    {
+        get { return maxSunZenithAngle; }
+        set
+        {
+            if (maxSunZenithAngle != value)
+            {
+                maxSunZenithAngle = value;
+                needsRecompute = true;
+            }
+        }
+    }
 
     // Constants
     const bool use_constant_solar_spectrum_ = false;
 
-    const double kLambdaR = 680.0;
-    const double kLambdaG = 550.0;
-    const double kLambdaB = 440.0;
+    const float kLambdaR = 680.0f;
+    const float kLambdaG = 550.0f;
+    const float kLambdaB = 440.0f;
 
-    // TODO: Try changing to half or double
+    // TODO: Try changing to half or float
     const RenderTextureFormat LUT_FORMAT = RenderTextureFormat.ARGBFloat;
 
     // Same as defined in PhysicalSkyCommon
@@ -99,34 +242,34 @@ public class AtmosphereModel : ScriptableObject
 
     // TODO: Make customizable?
     const int NUM_SCATTERING_ORDERS = 4;
-    const double kLengthUnitInMeters = 1000.0;
+    const float kLengthUnitInMeters = 1000.0f;
     const int kLambdaMin = 360;
     const int kLambdaMax = 830;
     [NonSerialized]
-    double[] kSolarIrradiance = {
-    1.11776, 1.14259, 1.01249, 1.14716, 1.72765, 1.73054, 1.6887, 1.61253,
-    1.91198, 2.03474, 2.02042, 2.02212, 1.93377, 1.95809, 1.91686, 1.8298,
-    1.8685, 1.8931, 1.85149, 1.8504, 1.8341, 1.8345, 1.8147, 1.78158, 1.7533,
-    1.6965, 1.68194, 1.64654, 1.6048, 1.52143, 1.55622, 1.5113, 1.474, 1.4482,
-    1.41018, 1.36775, 1.34188, 1.31429, 1.28303, 1.26758, 1.2367, 1.2082,
-    1.18737, 1.14683, 1.12362, 1.1058, 1.07124, 1.04992
+    float[] kSolarIrradiance = {
+    1.11776f, 1.14259f, 1.01249f, 1.14716f, 1.72765f, 1.73054f, 1.6887f, 1.61253f,
+    1.91198f, 2.03474f, 2.02042f, 2.02212f, 1.93377f, 1.95809f, 1.91686f, 1.8298f,
+    1.8685f, 1.8931f, 1.85149f, 1.8504f, 1.8341f, 1.8345f, 1.8147f, 1.78158f, 1.7533f,
+    1.6965f, 1.68194f, 1.64654f, 1.6048f, 1.52143f, 1.55622f, 1.5113f, 1.474f, 1.4482f,
+    1.41018f, 1.36775f, 1.34188f, 1.31429f, 1.28303f, 1.26758f, 1.2367f, 1.2082f,
+    1.18737f, 1.14683f, 1.12362f, 1.1058f, 1.07124f, 1.04992f
     };
 
     // Computed values
     [NonSerialized]
-    private double kSunSolidAngle;
+    private float kSunSolidAngle;
     [NonSerialized]
-    private List<double> wavelengths = new List<double>();
+    private List<float> wavelengths = new List<float>();
     [NonSerialized]
-    private List<double> solar_irradiance = new List<double>();
+    private List<float> solar_irradiance = new List<float>();
     [NonSerialized]
-    private List<double> rayleigh_scattering = new List<double>();
+    private List<float> rayleigh_scattering = new List<float>();
     [NonSerialized]
-    private List<double> mie_scattering = new List<double>();
+    private List<float> mie_scattering = new List<float>();
     [NonSerialized]
-    private List<double> mie_extinction = new List<double>();
+    private List<float> mie_extinction = new List<float>();
     [NonSerialized]
-    private List<double> ground_albedo = new List<double>();
+    private List<float> ground_albedo = new List<float>();
 
     // Computed textures
     [NonSerialized]
@@ -147,7 +290,7 @@ public class AtmosphereModel : ScriptableObject
     [NonSerialized]
     private Material PrecomputeMaterial = null;
 
-    private double Interpolate(List<double> wavelengths, List<double> wavelength_function, double wavelength)
+    private float Interpolate(List<float> wavelengths, List<float> wavelength_function, float wavelength)
     {
         Debug.Assert(wavelengths.Count > 0);
         Debug.Assert(wavelength_function.Count == wavelengths.Count);
@@ -160,14 +303,14 @@ public class AtmosphereModel : ScriptableObject
         {
             if (wavelength < wavelengths[i + 1])
             {
-                double u = (wavelength - wavelengths[i]) / (wavelengths[i + 1] - wavelengths[i]);
-                return wavelength_function[i] * (1.0 - u) + wavelength_function[i + 1] * u;
+                float u = (wavelength - wavelengths[i]) / (wavelengths[i + 1] - wavelengths[i]);
+                return wavelength_function[i] * (1.0f - u) + wavelength_function[i + 1] * u;
             }
         }
         return wavelength_function[wavelength_function.Count - 1];
     }
 
-    private Vector4 ScaleToWavelengths(List<double> v, double scale)
+    private Vector4 ScaleToWavelengths(List<float> v, float scale)
     {
         return new Vector4(
             (float)(Interpolate(wavelengths, v, kLambdaR) * scale),
@@ -220,17 +363,17 @@ public class AtmosphereModel : ScriptableObject
 
     public void SetAtmosphereUniforms(Material mat)
     {
-        mat.SetVector("_solar_irradiance", ScaleToWavelengths(solar_irradiance, 1.0));
+        mat.SetVector("_solar_irradiance", ScaleToWavelengths(solar_irradiance, 1.0f));
         mat.SetFloat("_sun_angular_radius", (float)sunAngularRadius);
-        mat.SetFloat("_bottom_radius", (float)(bottomRadius / kLengthUnitInMeters));
-        mat.SetFloat("_top_radius", (float)(topRadius / kLengthUnitInMeters));
+        mat.SetFloat("_bottom_radius", (float)(planetaryRadius / kLengthUnitInMeters));
+        mat.SetFloat("_top_radius", (float)((planetaryRadius + atmosphereThickness) / kLengthUnitInMeters));
         mat.SetFloat("_rayleigh_scale_height", (float)(rayleighScaleHeight / kLengthUnitInMeters));
         mat.SetVector("_rayleigh_scattering", ScaleToWavelengths(rayleigh_scattering, kLengthUnitInMeters));
         mat.SetFloat("_mie_scale_height", (float)(mieScaleHeight / kLengthUnitInMeters));
         mat.SetVector("_mie_scattering", ScaleToWavelengths(mie_scattering, kLengthUnitInMeters));
         mat.SetVector("_mie_extinction", ScaleToWavelengths(mie_extinction, kLengthUnitInMeters));
         mat.SetFloat("_mie_phase_function_g", (float)miePhaseFunctionG);
-        mat.SetVector("_ground_albedo", ScaleToWavelengths(ground_albedo, 1.0));
+        mat.SetVector("_ground_albedo", ScaleToWavelengths(ground_albedo, 1.0f));
         mat.SetFloat("_mu_s_min", (float)Math.Cos(maxSunZenithAngle));
 
         mat.SetVector("sun_radiance", new Vector3((float)kSolarIrradiance[0], (float)kSolarIrradiance[1], (float)kSolarIrradiance[2]) / (float)kSunSolidAngle);
@@ -255,12 +398,12 @@ public class AtmosphereModel : ScriptableObject
         mie_extinction.Clear();
         ground_albedo.Clear();
 
-        kSunSolidAngle = Math.PI * sunAngularRadius * sunAngularRadius;
+        kSunSolidAngle = Mathf.PI * sunAngularRadius * sunAngularRadius;
 
         for (int l = kLambdaMin; l <= kLambdaMax; l += 10)
         {
-            double lambda = l * 1e-3;  // micro-meters
-            double mie = mieAngstromBeta / mieScaleHeight * Math.Pow(lambda, -mieAngstromAlpha);
+            float lambda = l * 1e-3f;  // micro-meters
+            float mie = mieAngstromBeta / mieScaleHeight * Mathf.Pow(lambda, -mieAngstromAlpha);
             wavelengths.Add(l);
 
             if (use_constant_solar_spectrum_)
@@ -268,7 +411,7 @@ public class AtmosphereModel : ScriptableObject
             else
                 solar_irradiance.Add(kSolarIrradiance[(l - kLambdaMin) / 10]);
 
-            rayleigh_scattering.Add(rayleigh * Math.Pow(lambda, -4));
+            rayleigh_scattering.Add(rayleigh * Mathf.Pow(lambda, -4));
             mie_scattering.Add(mie * mieSingleScatteringAlbedo);
             mie_extinction.Add(mie);
             ground_albedo.Add(groundAlbedo);
