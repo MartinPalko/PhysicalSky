@@ -1,16 +1,19 @@
 ﻿using UnityEngine;
 using UnityEditor;
 
-[CustomEditor(typeof(PhysicalSky))]
-public class PhysicalSkyEditor : Editor
+namespace PhysicalSky
 {
-    public override void OnInspectorGUI()
+    [CustomEditor(typeof(PhysicalSky))]
+    public class PhysicalSkyEditor : Editor
     {
-        PhysicalSky physicalSky = serializedObject.targetObject as PhysicalSky;
+        public override void OnInspectorGUI()
+        {
+            PhysicalSky physicalSky = serializedObject.targetObject as PhysicalSky;
 
-        if (!physicalSky)
-            return;
+            if (!physicalSky)
+                return;
 
-        physicalSky.Altitude = Mathf.Max(0.001f, EditorGUILayout.FloatField("Altitude (km)", physicalSky.Altitude));
+            physicalSky.Altitude = Mathf.Max(0.001f, EditorGUILayout.FloatField("Altitude (km)", physicalSky.Altitude));
+        }
     }
 }
