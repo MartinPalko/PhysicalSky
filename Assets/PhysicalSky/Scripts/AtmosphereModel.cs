@@ -5,7 +5,7 @@ using System;
 namespace PhysicalSky
 {
     [CreateAssetMenu(fileName = "NewAtmosphereModel", menuName = "AtmosphereModel")]
-    public class AtmosphereModel : ScriptableObject
+    public class AtmosphereModel : ScriptableObject, IAtmosphereModel
     {
         enum PrecomputePass
         {
@@ -364,28 +364,27 @@ namespace PhysicalSky
             RenderTexture.ReleaseTemporary(dummy);
         }
 
-        public void SetAtmosphereUniforms(Material mat)
+        public void SetShaderUniforms(Material m)
         {
-            mat.SetVector("_solar_irradiance", ScaleToWavelengths(solar_irradiance, 1.0f));
-            mat.SetFloat("_sun_angular_radius", (float)sunAngularRadius);
-            mat.SetFloat("_bottom_radius", (float)(planetaryRadius / kLengthUnitInMeters));
-            mat.SetFloat("_top_radius", (float)((planetaryRadius + atmosphereThickness) / kLengthUnitInMeters));
-            mat.SetFloat("_rayleigh_scale_height", (float)(rayleighScaleHeight / kLengthUnitInMeters));
-            mat.SetVector("_rayleigh_scattering", ScaleToWavelengths(rayleigh_scattering, kLengthUnitInMeters));
-            mat.SetFloat("_mie_scale_height", (float)(mieScaleHeight / kLengthUnitInMeters));
-            mat.SetVector("_mie_scattering", ScaleToWavelengths(mie_scattering, kLengthUnitInMeters));
-            mat.SetVector("_mie_extinction", ScaleToWavelengths(mie_extinction, kLengthUnitInMeters));
-            mat.SetFloat("_mie_phase_function_g", (float)miePhaseFunctionG);
-            mat.SetVector("_ground_albedo", ScaleToWavelengths(ground_albedo, 1.0f));
-            mat.SetFloat("_mu_s_min", (float)Math.Cos(maxSunZenithAngle));
-
-            mat.SetVector("sun_radiance", new Vector3((float)kSolarIrradiance[0], (float)kSolarIrradiance[1], (float)kSolarIrradiance[2]) / (float)kSunSolidAngle);
-            mat.SetVector("sun_size", new Vector3(Mathf.Tan((float)sunAngularRadius), Mathf.Cos((float)sunAngularRadius), (float)sunAngularRadius));
+            m.SetVector("_solar_irradiance", ScaleToWavelengths(solar_irradiance, 1.0f));
+            m.SetFloat("_sun_angular_radius", sunAngularRadius);
+            m.SetFloat("_bottom_radius", planetaryRadius / kLengthUnitInMeters);
+            m.SetFloat("_top_radius", (planetaryRadius + atmosphereThickness) / kLengthUnitInMeters);
+            m.SetFloat("_rayleigh_scale_height", rayleighScaleHeight / kLengthUnitInMeters);
+            m.SetVector("_rayleigh_scattering", ScaleToWavelengths(rayleigh_scattering, kLengthUnitInMeters));
+            m.SetFloat("_mie_scale_height", mieScaleHeight / kLengthUnitInMeters);
+            m.SetVector("_mie_scattering", ScaleToWavelengths(mie_scattering, kLengthUnitInMeters));
+            m.SetVector("_mie_extinction", ScaleToWavelengths(mie_extinction, kLengthUnitInMeters));
+            m.SetFloat("_mie_phase_function_g", miePhaseFunctionG);
+            m.SetVector("_ground_albedo", ScaleToWavelengths(ground_albedo, 1.0f));
+            m.SetFloat("_mu_s_min", Mathf.Cos(maxSunZenithAngle));
+            m.SetVector("sun_radiance", new Vector3(kSolarIrradiance[0], kSolarIrradiance[1], kSolarIrradiance[2]) / kSunSolidAngle);
+            m.SetVector("sun_size", new Vector3(Mathf.Tan(sunAngularRadius), Mathf.Cos(sunAngularRadius), sunAngularRadius));
         }
 
-        public void ComputeLookupTextures()
+        public void Compute()
         {
-            Debug.Log("Computing LUT");
+            Debug.Log("Computing Atmospheric Lookup Textures");
             float timerStartCompute = Time.realtimeSinceStartup;
 
             if (SystemInfo.graphicsShaderLevel < 50)
@@ -423,7 +422,7 @@ namespace PhysicalSky
             if (!PrecomputeMaterial)
                 PrecomputeMaterial = new Material(PrecomputeShader);
 
-            SetAtmosphereUniforms(PrecomputeMaterial);
+            SetShaderUniforms(PrecomputeMaterial);
 
             RenderTexture DeltaIrradianceTexture = new RenderTexture(IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
             DeltaIrradianceTexture.useMipMap = false;
@@ -516,8 +515,10 @@ namespace PhysicalSky
             needsRecompute = false;
         }
 
-        void ReleaseLookupTextures()
+        public void ReleaseResources()
         {
+            Debug.Log("Released Atmosphere Resources");
+
             if (transmittanceLUT && transmittanceLUT.IsCreated())
                 transmittanceLUT.Release();
 
@@ -535,7 +536,7 @@ namespace PhysicalSky
 
         private void OnDestroy()
         {
-            ReleaseLookupTextures();
+            ReleaseResources();
         }
     }
 }

@@ -4,12 +4,10 @@ namespace PhysicalSky.Utilities
 {
     public struct CartesianCoords
     {
-        public static void SphericalToCartesian(float radius, float polar, float elevation, out Vector3 outCart)
+        public static Vector3 SphericalToCartesian(float polar, float elevation)
         {
-            float a = radius * Mathf.Cos(elevation);
-            outCart.x = a * Mathf.Cos(polar);
-            outCart.y = radius * Mathf.Sin(elevation);
-            outCart.z = a * Mathf.Sin(polar);
+            float a = Mathf.Cos(elevation);
+            return new Vector3(a * Mathf.Cos(polar), Mathf.Sin(elevation), a * Mathf.Sin(polar));
         }
 
         public static void CartesianToSpherical(Vector3 cartCoords, out float outRadius, out float outPolar, out float outElevation)
