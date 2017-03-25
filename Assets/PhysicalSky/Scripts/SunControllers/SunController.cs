@@ -2,6 +2,7 @@
 
 namespace PhysicalSky
 {
+    [ExecuteInEditMode]
     public abstract class SunController : MonoBehaviour
     {
         protected IPhysicalSky sky;

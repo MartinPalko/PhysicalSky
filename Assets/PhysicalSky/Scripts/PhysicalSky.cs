@@ -3,6 +3,7 @@ using System;
 
 namespace PhysicalSky
 {
+    [ExecuteInEditMode]
     public class PhysicalSky : MonoBehaviour, IPhysicalSky
     {
         [SerializeField]

@@ -16,10 +16,9 @@ namespace PhysicalSky
             IndirectIrradiance = 4,
             MultipleScattering = 5
         }
-
-        [NonSerialized]
-        bool needsRecompute = true;
-        public bool NeedsRecompute { get { return needsRecompute; } }
+        
+        private bool needsRecompute = true;
+        public bool NeedsRecompute { get { return needsRecompute || TexturesInvalid(); } }
 
         [SerializeField]
         private float constantSolarIrradiance = 1.5f;
@@ -220,7 +219,7 @@ namespace PhysicalSky
         }
 
         // Constants
-        const bool use_constant_solar_spectrum_ = false;
+        const bool use_constant_solar_spectrum_ = true;
 
         const float kLambdaR = 680.0f;
         const float kLambdaG = 550.0f;
@@ -322,7 +321,7 @@ namespace PhysicalSky
                 1.0f);
         }
 
-        public void AllocateLookupTextures()
+        private void AllocateLookupTextures()
         {
             if (!transmittanceLUT)
                 transmittanceLUT = new RenderTexture(TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT, 0, LUT_FORMAT);
@@ -350,6 +349,18 @@ namespace PhysicalSky
                 irradianceLUT.useMipMap = false;
                 irradianceLUT.Create();
             }
+        }
+
+        private void ReleaseLookupTextures()
+        {
+            if (transmittanceLUT && transmittanceLUT.IsCreated())
+                transmittanceLUT.Release();
+
+            if (scatteringLUT && scatteringLUT.IsCreated())
+                scatteringLUT.Release();
+
+            if (irradianceLUT && irradianceLUT.IsCreated())
+                irradianceLUT.Release();
         }
 
         private void Blit(RenderTexture dest, Material mat, int pass)
@@ -518,15 +529,21 @@ namespace PhysicalSky
         public void ReleaseResources()
         {
             Debug.Log("Released Atmosphere Resources");
+            ReleaseLookupTextures();
+            needsRecompute = true;
+        }
 
-            if (transmittanceLUT && transmittanceLUT.IsCreated())
-                transmittanceLUT.Release();
+        public bool TexturesInvalid()
+        {
+            if (!transmittanceLUT || !transmittanceLUT.IsCreated())
+                return true;
+            else if (!scatteringLUT || !scatteringLUT.IsCreated())
+                return true;
 
-            if (scatteringLUT && scatteringLUT.IsCreated())
-                scatteringLUT.Release();
-
-            if (irradianceLUT && irradianceLUT.IsCreated())
-                irradianceLUT.Release();
+            else if (!irradianceLUT || !irradianceLUT.IsCreated())
+                return true;
+            else
+                return false;
         }
 
         private void Awake()
