@@ -55,7 +55,7 @@
 
 			half4 frag (v2f IN) : SV_Target
 			{
-				float3 sun_direction = _WorldSpaceLightPos0.xyz;				
+				float3 sun_direction = _WorldSpaceLightPos0.xyz;
 
 				AtmosphereParameters params = GetAtmosphereParameters();
 
@@ -67,7 +67,7 @@
 				float3 radiance = GetSkyRadiance(params, transmittance_texture, scattering_texture, scattering_texture, camera, view_ray, shadow_length, sun_direction, transmittance);
 
 				// HACK: No other real way of telling if we're being rendered as part of a reflection capture (in which we shouldn't be drawing the sun)
-				bool reflection_capture = any(_LightColor0.xyz > half3(0, 0, 0));
+				bool reflection_capture = any(_LightColor0.xyz == half3(0, 0, 0));
 				if (!reflection_capture && dot(sun_direction, view_ray) > sun_size.y)
 				{
 					radiance += transmittance * sun_radiance;
