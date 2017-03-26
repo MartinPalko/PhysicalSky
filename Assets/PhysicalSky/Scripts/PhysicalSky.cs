@@ -28,19 +28,6 @@ namespace PhysicalSky
             skyMaterial = new Material(skyShader);
         }
 
-        private void OnWillRenderObject()
-        {
-            Debug.Log("Will render object with camera " + Camera.current.name);
-        }
-
-        private void OnRenderObject()
-        {
-            if(Camera.current.name == "Reflection Probes Camera")
-            {
-                Debug.Log("Rendering reflection probes");
-            }
-        }
-
         private void Update()
         {
             if (atmosphere.NeedsRecompute)
