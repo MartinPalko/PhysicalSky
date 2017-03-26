@@ -19,8 +19,6 @@
 			#include "PhysicalSkyCommon.cginc"
 			#include "AtmosphereUniforms.cginc"
 
-			sampler2D _MainTex;
-			uniform float4 _MainTex_TexelSize;
 			uniform sampler2D transmittance_texture;
 			uniform sampler3D scattering_texture;
 			uniform sampler2D irradiance_texture;
