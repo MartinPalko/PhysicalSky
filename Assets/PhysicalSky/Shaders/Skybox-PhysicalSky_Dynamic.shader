@@ -15,6 +15,7 @@
 			#pragma fragment frag
 
 			#include "UnityCG.cginc"
+			#include "Lighting.cginc"
 			#include "PhysicalSkyCommon.cginc"
 			#include "AtmosphereUniforms.cginc"
 
@@ -25,7 +26,6 @@
 			uniform sampler2D irradiance_texture;
 
 			uniform float3 camera;
-			uniform float3 sun_direction;
 			uniform float3 sun_radiance;
 			uniform float3 sun_size;
 
@@ -55,7 +55,7 @@
 
 			half4 frag (v2f IN) : SV_Target
 			{
-				//return float4(normalize(IN.view.xyz) * 0.5 + 0.5, 1.0);
+				float3 sun_direction = _WorldSpaceLightPos0.xyz;				
 
 				AtmosphereParameters params = GetAtmosphereParameters();
 
@@ -66,15 +66,19 @@
 				float3 transmittance;
 				float3 radiance = GetSkyRadiance(params, transmittance_texture, scattering_texture, scattering_texture, camera, view_ray, shadow_length, sun_direction, transmittance);
 
-				if (dot(sun_direction, view_ray) > sun_size.y)
+				// HACK: No other real way of telling if we're being rendered as part of a reflection capture (in which we shouldn't be drawing the sun)
+				bool reflection_capture = any(_LightColor0.xyz > half3(0, 0, 0));
+				if (!reflection_capture && dot(sun_direction, view_ray) > sun_size.y)
 				{
 					radiance += transmittance * sun_radiance;
 				}
 
-				float exposure = 10;
+				// TODO: Make into a uniform and set from script.
+				float exposure = 20;
 				float white_point = 0.4;
 
-				return half4(pow(1 - exp(-radiance / white_point * exposure), (1.0 / 2.2)), 1);
+				return half4(radiance * exposure, 1.0f);
+				//return half4(pow(1 - exp(-radiance / white_point * exposure), (1.0 / 2.2)), 1);
 
 			}
 			ENDCG

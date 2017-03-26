@@ -22,26 +22,41 @@ namespace PhysicalSky
         private Shader skyShader;
 
         private Material skyMaterial;
-        
+
         private void Start()
         {
             skyMaterial = new Material(skyShader);
+        }
+
+        private void OnWillRenderObject()
+        {
+            Debug.Log("Will render object with camera " + Camera.current.name);
+        }
+
+        private void OnRenderObject()
+        {
+            if(Camera.current.name == "Reflection Probes Camera")
+            {
+                Debug.Log("Rendering reflection probes");
+            }
         }
 
         private void Update()
         {
             if (atmosphere.NeedsRecompute)
                 atmosphere.Compute();
-            
-            atmosphere.SetShaderUniforms(skyMaterial);
-            skyMaterial.SetTexture("transmittance_texture", atmosphere.TransmittanceLUT);
-            skyMaterial.SetTexture("scattering_texture", atmosphere.ScatteringLUT);
-            skyMaterial.SetTexture("irradiance_texture", atmosphere.IrradianceLUT);
 
-            skyMaterial.SetVector("camera", new Vector3(0, (atmosphere.PlanetaryRadius / 1000) + altitude, 0));
-            skyMaterial.SetVector("sun_direction", sunDirection.normalized);
+            if (skyMaterial)
+            {
+                atmosphere.SetShaderUniforms(skyMaterial);
+                skyMaterial.SetTexture("transmittance_texture", atmosphere.TransmittanceLUT);
+                skyMaterial.SetTexture("scattering_texture", atmosphere.ScatteringLUT);
+                skyMaterial.SetTexture("irradiance_texture", atmosphere.IrradianceLUT);
 
-            RenderSettings.skybox = skyMaterial;
+                skyMaterial.SetVector("camera", new Vector3(0, (atmosphere.PlanetaryRadius / 1000) + altitude, 0));
+
+                RenderSettings.skybox = skyMaterial;
+            }
         }
     }
 }
