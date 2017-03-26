@@ -9,7 +9,8 @@ namespace PhysicalSky
 
         protected void Update()
         {
-            sky.SunDirection = -sunDirectionalLight.transform.forward;
+            if (sky != null && sunDirectionalLight != null)
+                sky.SunDirection = -sunDirectionalLight.transform.forward;
         }
     }
 }
