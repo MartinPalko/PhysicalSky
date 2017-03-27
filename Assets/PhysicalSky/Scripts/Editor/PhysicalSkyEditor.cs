@@ -13,8 +13,12 @@ namespace PhysicalSky
             if (!physicalSky)
                 return;
 
-            physicalSky.Altitude = Mathf.Max(0.001f, EditorGUILayout.FloatField("Altitude (km)", physicalSky.Altitude));
+            physicalSky.SunBrightnessMultiplier = EditorGUILayout.FloatField("Sun Light Brightness", physicalSky.SunBrightnessMultiplier);
+            physicalSky.SkyExposure = EditorGUILayout.FloatField("Sky Exposure", physicalSky.SkyExposure);
+            physicalSky.Altitude = EditorGUILayout.FloatField("Altitude (km)", physicalSky.Altitude);
             physicalSky.Atmosphere = EditorGUILayout.ObjectField("Atmosphere Model", physicalSky.Atmosphere as AtmosphereModel, typeof(AtmosphereModel), false) as IAtmosphereModel;
+
+            EditorUtility.SetDirty(physicalSky);
 
         }
     }

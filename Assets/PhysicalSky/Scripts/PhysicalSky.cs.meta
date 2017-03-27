@@ -1,13 +1,13 @@
 fileFormatVersion: 2
 guid: b56b70524e0d2f94d84fd4be2c31105b
-timeCreated: 1489946097
+timeCreated: 1490493176
 licenseType: Free
 MonoImporter:
   serializedVersion: 2
   defaultReferences:
-  - atmosphereModel: {instanceID: 0}
-  - sunLight: {instanceID: 0}
+  - atmosphere: {instanceID: 0}
   - skyShader: {fileID: 4800000, guid: cd17161c79d920045bbbd9f7c5df52aa, type: 3}
+  - sunRadianceShader: {fileID: 4800000, guid: 19d7a9db099b2504a94dc22631c54094, type: 3}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

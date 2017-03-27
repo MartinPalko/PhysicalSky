@@ -23,7 +23,12 @@ namespace PhysicalSky
 
         private void Update()
         {
-            float sunsetY = -0.025f; // TODO: Find actual horizon angle based on altitude & planetary radius.
+            if (!Application.isPlaying)
+            {
+                return;
+            }
+
+            float sunsetY = -0.03f; // TODO: Find actual horizon angle based on altitude & planetary radius.
             float sunSpeed = 1.0f;
 
             sunSpeed *= sky.SunDirection.y < sunsetY ? nightSpeedMultiplier : 1.0f;

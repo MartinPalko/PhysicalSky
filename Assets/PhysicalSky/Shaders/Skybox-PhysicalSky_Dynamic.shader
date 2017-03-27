@@ -11,6 +11,7 @@
 		Pass
 		{
 			CGPROGRAM
+			#pragma target 5.0
 			#pragma vertex vert
 			#pragma fragment frag
 
@@ -26,6 +27,7 @@
 			uniform float3 camera;
 			uniform float3 sun_radiance;
 			uniform float3 sun_size;
+			uniform float sky_exposure;
 
 			struct appdata_t
 			{
@@ -71,11 +73,9 @@
 					radiance += transmittance * sun_radiance;
 				}
 
-				// TODO: Make into a uniform and set from script.
-				float exposure = 20;
-				float white_point = 0.4;
+				return half4(radiance * sky_exposure, 1.0f);
 
-				return half4(radiance * exposure, 1.0f);
+				//float white_point = 0.4;
 				//return half4(pow(1 - exp(-radiance / white_point * exposure), (1.0 / 2.2)), 1);
 
 			}
