@@ -324,7 +324,7 @@ namespace PhysicalSky
         private void AllocateLookupTextures()
         {
             if (!transmittanceLUT)
-                transmittanceLUT = new RenderTexture(TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT, 0, LUT_FORMAT);
+                transmittanceLUT = new RenderTexture(TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
             if (!transmittanceLUT.IsCreated())
             {
                 transmittanceLUT.useMipMap = false;
@@ -332,7 +332,7 @@ namespace PhysicalSky
             }
 
             if (!scatteringLUT)
-                scatteringLUT = new RenderTexture(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, 0, LUT_FORMAT);
+                scatteringLUT = new RenderTexture(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
             if (!scatteringLUT.IsCreated())
             {
                 scatteringLUT.volumeDepth = SCATTERING_TEXTURE_DEPTH;
@@ -343,7 +343,7 @@ namespace PhysicalSky
             }
 
             if (!irradianceLUT)
-                irradianceLUT = new RenderTexture(IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT, 0, LUT_FORMAT);
+                irradianceLUT = new RenderTexture(IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
             if (!irradianceLUT.IsCreated())
             {
                 irradianceLUT.useMipMap = false;
