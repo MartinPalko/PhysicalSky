@@ -1,5 +1,4 @@
 ﻿using UnityEngine;
-using System;
 
 namespace PhysicalSky
 {
@@ -23,7 +22,7 @@ namespace PhysicalSky
 
         [SerializeField]
         private float altitude = 0.1f;
-        public float Altitude { get { return altitude; } set { altitude = Mathf.Max(value, 0.0f); } }
+        public float Altitude { get { return altitude; } set { altitude = Mathf.Max(value, 0.0f); DynamicGI.UpdateEnvironment(); } }
 
         [SerializeField]
         private AtmosphereModel atmosphere;
@@ -125,6 +124,22 @@ namespace PhysicalSky
                 RenderSettings.skybox = skyMaterial;
                 RenderSettings.sun = sunLight;
             }
+
+#if UNITY_EDITOR
+            // Force update of realtime reflection probes while in edit mode.
+            if (!Application.isPlaying)
+            {
+                ReflectionProbe[] reflectionProbes = FindObjectsOfType<ReflectionProbe>();
+                for (int i = 0; i < reflectionProbes.Length; i++)
+                {
+                    ReflectionProbe probe = reflectionProbes[i];
+                    if (probe.mode == UnityEngine.Rendering.ReflectionProbeMode.Realtime)
+                    {
+                        probe.RenderProbe();
+                    }
+                }
+            }
+#endif
         }
     }
 }
