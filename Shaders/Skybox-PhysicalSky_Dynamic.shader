@@ -29,6 +29,12 @@
 			uniform float3 sun_size;
 			uniform float sky_exposure;
 
+			#if defined(UNITY_COLORSPACE_GAMMA)
+				#define LINEAR_TO_OUTPUT(color) sqrt(color)
+			#else
+				#define LINEAR_TO_OUTPUT(color) color
+			#endif
+
 			struct appdata_t
 			{
 				float4 vertex : POSITION;
@@ -73,11 +79,9 @@
 					radiance += transmittance * sun_radiance;
 				}
 
-				return half4(radiance * sky_exposure, 1.0f);
+				half3 result = radiance * sky_exposure;
 
-				//float white_point = 0.4;
-				//return half4(pow(1 - exp(-radiance / white_point * exposure), (1.0 / 2.2)), 1);
-
+				return half4(LINEAR_TO_OUTPUT(result), 1.0f);
 			}
 			ENDCG
 		}
