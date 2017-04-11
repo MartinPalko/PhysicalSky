@@ -4,7 +4,7 @@ using System;
 
 namespace PhysicalSky
 {
-    [CreateAssetMenu(fileName = "NewAtmosphereModel", menuName = "AtmosphereModel")]
+    [CreateAssetMenu(fileName = "NewAtmosphereModel", menuName = "PhysicalSky/AtmosphereModel")]
     public class AtmosphereModel : ScriptableObject, IAtmosphereModel
     {
         enum PrecomputePass
