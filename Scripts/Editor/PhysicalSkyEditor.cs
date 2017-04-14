@@ -18,6 +18,10 @@ namespace PhysicalSky
             physicalSky.Altitude = EditorGUILayout.FloatField("Altitude (km)", physicalSky.Altitude);
             physicalSky.Atmosphere = EditorGUILayout.ObjectField("Atmosphere Model", physicalSky.Atmosphere as AtmosphereModel, typeof(AtmosphereModel), false) as IAtmosphereModel;
 
+            physicalSky.StarBrightnessMultiplier = EditorGUILayout.FloatField("Star Brightness", physicalSky.StarBrightnessMultiplier);
+            physicalSky.StarBrightnessPower = EditorGUILayout.FloatField("Star Brightness Power", physicalSky.StarBrightnessPower);
+            physicalSky.StarMap = EditorGUILayout.ObjectField("Star Map", physicalSky.StarMap, typeof(StarMap), false) as StarMap;
+
             EditorUtility.SetDirty(physicalSky);
 
         }

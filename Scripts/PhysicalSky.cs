@@ -29,23 +29,69 @@ namespace PhysicalSky
         public IAtmosphereModel Atmosphere { get { return atmosphere; } set { atmosphere = value as AtmosphereModel; } }
 
         [SerializeField]
-        private Shader skyShader;
-        [SerializeField]
-        private Shader sunRadianceShader;
+        float starBrightnessMultiplier = 1.0f;
+        public float StarBrightnessMultiplier { get { return starBrightnessMultiplier; } set { starBrightnessMultiplier = Mathf.Max(value, 0.0f); } }
 
-        private Material skyMaterial;
-        private Material sunRadianceMaterial;
+        [SerializeField]
+        float starBrightnessPower = 0.454545f;
+        public float StarBrightnessPower { get { return starBrightnessPower; } set { starBrightnessPower = Mathf.Max(value, 0.0f); } }
+
+        [SerializeField]
+        private StarMap starMap;
+        public StarMap StarMap { get { return starMap; } set { starMap = value; } }
+
+        [SerializeField]
+        private Shader skyShader = null;
+        [SerializeField]
+        private Shader sunRadianceShader = null;
+        [SerializeField]
+        private Shader starMeshShader = null;
+
+        private Material skyMaterial = null;
+        private Material sunRadianceMaterial = null;
+
+        private Material starMeshMaterial = null;
+        private GameObject starMeshObject = null;
+        private MeshFilter starMeshFilter = null;
 
         private const int SUN_RADIANCE_TEXTURE_SIZE = 8;
-        private Light sunLight;
-        private Texture2D sunRadianceTexture;
+        private Light sunLight = null;
+        private Texture2D sunRadianceTexture = null;
 
         private void Start()
         {
             skyMaterial = new Material(skyShader);
             sunRadianceMaterial = new Material(sunRadianceShader);
+            starMeshMaterial = new Material(starMeshShader);
+
+            starMeshObject = new GameObject("StarMesh");
+            starMeshObject.transform.parent = transform;
+#if PHYSICAL_SKY_DEBUG
+            starMeshObject.hideFlags = HideFlags.DontSave;
+#else
+            starMeshObject.hideFlags = HideFlags.HideAndDontSave;
+#endif
+            starMeshFilter = starMeshObject.AddComponent<MeshFilter>();
+            starMeshFilter.mesh = StarMap.CreateStarMesh();     
+            MeshRenderer starMeshRenderer = starMeshObject.AddComponent<MeshRenderer>();
+            starMeshRenderer.material = starMeshMaterial;
+            
             sunLight = GetComponent<Light>();
             sunLight.type = LightType.Directional;
+        }
+
+        private void OnDestroy()
+        {
+#if UNITY_EDITOR
+            if (!Application.isPlaying)
+            {
+                DestroyImmediate(starMeshObject);
+            }
+            else
+#endif
+            {
+                Destroy(starMeshObject);
+            }
         }
 
         private void ConfigureMaterial(Material m)
@@ -123,6 +169,17 @@ namespace PhysicalSky
                 skyMaterial.SetFloat("sky_exposure", SkyExposure);
                 RenderSettings.skybox = skyMaterial;
                 RenderSettings.sun = sunLight;
+            }
+
+            if (starMeshMaterial)
+            {
+                starMeshMaterial.SetFloat("star_intensity_multiplier", starBrightnessMultiplier);
+                starMeshMaterial.SetFloat("star_intensity_power", starBrightnessPower);
+                
+                float D = atmosphere.PlanetaryRadius + altitude * 1000;
+                float R = atmosphere.PlanetaryRadius;
+                float planetAngularRad = 2 * Mathf.Acos(Mathf.Sqrt(Mathf.Pow(D, 2) - Mathf.Pow(R, 2)) / D);
+                starMeshMaterial.SetFloat("planet_size", planetAngularRad);              
             }
 
 #if UNITY_EDITOR
