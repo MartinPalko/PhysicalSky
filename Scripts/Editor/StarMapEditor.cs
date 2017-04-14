@@ -11,6 +11,7 @@ namespace PhysicalSky
 
         string csvPath = "";
         int numberToImport = 4096;
+        bool warnOnParseError = false;
 
         class HeaderInfo
         {
@@ -58,7 +59,8 @@ namespace PhysicalSky
                 csvPath = EditorUtility.OpenFilePanelWithFilters("Import star database", Application.dataPath, new string[]{ "Comma seperated values", "csv" });
             }
             GUILayout.EndHorizontal();
-            EditorGUILayout.IntField("Number to Import:", numberToImport);
+            numberToImport = EditorGUILayout.IntField("Number to Import:", numberToImport);
+            warnOnParseError = EditorGUILayout.Toggle("Warn on parse error: ", warnOnParseError);
 
             GUILayout.Space(5);
             if (GUILayout.Button("Import"))
@@ -84,9 +86,36 @@ namespace PhysicalSky
                 if (headerInfo != null)
                 {
                     StarMap.Star newStar = new StarMap.Star();
-                    newStar.position = new Vector3(float.Parse(splitLine[headerInfo.iX]), float.Parse(splitLine[headerInfo.iY]), float.Parse(splitLine[headerInfo.iZ]));
-                    newStar.colorIndex = float.Parse(splitLine[headerInfo.iCi]);
-                    newStar.apparentMagnitude = float.Parse(splitLine[headerInfo.iMag]);
+                    try
+                    {
+                        newStar.position = new Vector3(float.Parse(splitLine[headerInfo.iX]), float.Parse(splitLine[headerInfo.iY]), float.Parse(splitLine[headerInfo.iZ]));
+                    }
+                    catch(System.FormatException e)
+                    {
+                        Debug.LogWarning("Error parsing star position: " + e.Message);
+                        continue;
+                    }
+
+                    try
+                    {
+                        newStar.colorIndex = float.Parse(splitLine[headerInfo.iCi]);
+                    }
+                    catch (System.FormatException e)
+                    {
+                        Debug.LogWarning("Error parsing star color index value \'" + splitLine[headerInfo.iCi] + "\': " + e.Message);
+                        continue;
+                    }
+
+                    try
+                    {
+                        newStar.apparentMagnitude = float.Parse(splitLine[headerInfo.iMag]);
+                    }
+                    catch (System.FormatException e)
+                    {
+                        Debug.LogWarning("Error parsing star color index value \'" + splitLine[headerInfo.iMag] + "\': " + e.Message);
+                        continue;
+                    }
+                    
                     stars.Add(newStar);
                 }
                 else
@@ -95,7 +124,10 @@ namespace PhysicalSky
 
             // Sort by apparent magnitude
             stars.Sort((a, b) => a.apparentMagnitude.CompareTo(b.apparentMagnitude));
-            stars.RemoveRange(numberToImport, stars.Count - numberToImport);
+
+            int numberToRemove = stars.Count - numberToImport;
+            if (numberToRemove > 0)
+                stars.RemoveRange(numberToImport, numberToRemove);
 
             starMap.Clear();
             starMap.Add(stars);
