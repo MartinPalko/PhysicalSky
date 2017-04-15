@@ -69,6 +69,8 @@ namespace PhysicalSky
                 EditorUtility.SetDirty(starMap);
                 Close();
             }
+
+
         }
 
         void ImportCSV()
@@ -155,6 +157,12 @@ namespace PhysicalSky
                 mapImporter.starMap = starMap;
                 mapImporter.ShowUtility();                
             }
+
+            starMap.FirstIsSun = EditorGUILayout.Toggle("Brightest Star is Sun", starMap.FirstIsSun);
+            starMap.BackgroundCube = EditorGUILayout.ObjectField("Background Cubemap", starMap.BackgroundCube, typeof(Cubemap), false) as Cubemap;
+            starMap.BackgroundCubeBrightness = EditorGUILayout.FloatField("Cubemap Brightness", starMap.BackgroundCubeBrightness);
+            starMap.BackgroundCubeRotation = EditorGUILayout.Vector3Field("Cubemap Rotation", starMap.BackgroundCubeRotation);
+
         }
     }
 }

@@ -29,6 +29,10 @@
 			uniform float3 sun_size;
 			uniform float sky_exposure;
 
+			uniform samplerCUBE star_cubemap;
+			uniform float star_brightness;
+			uniform float4x4 star_rotation;
+
 			#if defined(UNITY_COLORSPACE_GAMMA)
 				#define LINEAR_TO_OUTPUT(color) sqrt(color)
 			#else
@@ -79,9 +83,11 @@
 					radiance += transmittance * sun_radiance;
 				}
 
-				half3 result = radiance * sky_exposure;
+				radiance += texCUBE(star_cubemap, mul(view_ray, star_rotation)).rgb * star_brightness * transmittance;
 
-				return half4(LINEAR_TO_OUTPUT(result), 1.0f);
+				half3 result = LINEAR_TO_OUTPUT(radiance * sky_exposure);
+
+				return half4(result, 1.0f);
 			}
 			ENDCG
 		}

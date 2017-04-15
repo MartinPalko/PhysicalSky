@@ -7,6 +7,7 @@ namespace PhysicalSky
     public class PhysicalSky : MonoBehaviour, IPhysicalSky
     {
         public Vector3 SunDirection { get { return -transform.forward; } set { transform.rotation = Quaternion.LookRotation(-value); } }
+        public Quaternion StarRotation { get { return starMeshObject.transform.rotation; } set { starMeshObject.transform.rotation = value; } }
 
         [SerializeField]
         float sunBrightnessMultiplier = 1.0f;
@@ -65,7 +66,6 @@ namespace PhysicalSky
             starMeshMaterial = new Material(starMeshShader);
 
             starMeshObject = new GameObject("StarMesh");
-            starMeshObject.transform.parent = transform;
 #if PHYSICAL_SKY_DEBUG
             starMeshObject.hideFlags = HideFlags.DontSave;
 #else
@@ -167,12 +167,28 @@ namespace PhysicalSky
             {
                 ConfigureMaterial(skyMaterial);
                 skyMaterial.SetFloat("sky_exposure", SkyExposure);
+
+                if (starMap)
+                {
+                    skyMaterial.SetTexture("star_cubemap", starMap.BackgroundCube);
+                    skyMaterial.SetFloat("star_brightness", starMap.BackgroundCubeBrightness * starBrightnessMultiplier);
+                    skyMaterial.SetMatrix("star_rotation", Matrix4x4.TRS(Vector3.zero, Quaternion.Euler(starMap.BackgroundCubeRotation) * starMeshObject.transform.rotation, Vector3.one));
+                }
+                else
+                {
+                    skyMaterial.SetTexture("star_cubemap", null);
+                    skyMaterial.SetFloat("star_brightness", 0.0f);
+                    skyMaterial.SetMatrix("star_rotation", Matrix4x4.identity);
+                }
+
                 RenderSettings.skybox = skyMaterial;
                 RenderSettings.sun = sunLight;
             }
 
             if (starMeshMaterial)
             {
+                ConfigureMaterial(starMeshMaterial);
+
                 starMeshMaterial.SetFloat("star_intensity_multiplier", starBrightnessMultiplier);
                 starMeshMaterial.SetFloat("star_intensity_power", starBrightnessPower);
                 

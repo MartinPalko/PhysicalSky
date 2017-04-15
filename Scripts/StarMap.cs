@@ -19,15 +19,28 @@ namespace PhysicalSky
         [SerializeField]
         private List<Star> m_stars = new List<Star>();
 
-        [SerializeField]
-        private bool m_firstIsSun = true;
-
         public void Add(Star star) { m_stars.Add(star); }
         public void Add(IEnumerable<Star> stars) { m_stars.AddRange(stars); }
         public void RemoveAt(int index) { m_stars.RemoveAt(index); }
         public void Clear() { m_stars.Clear(); }
         public int Count() { return m_stars.Count; }
         public Star Get(int index) { return m_stars[index]; }
+
+        [SerializeField]
+        private bool m_firstIsSun = true;
+        public bool FirstIsSun { get { return m_firstIsSun; } set { m_firstIsSun = value; } }
+
+        [SerializeField]
+        private Cubemap m_backgroundCube = null;
+        public Cubemap BackgroundCube { get { return m_backgroundCube; } set { m_backgroundCube = value; } }
+
+        [SerializeField]
+        private float m_backgroundCubeBrightness = 0.1f;
+        public float BackgroundCubeBrightness { get { return m_backgroundCubeBrightness; } set { m_backgroundCubeBrightness = value; } }
+
+        [SerializeField]
+        private Vector3 m_backgroundCubeRotation = Vector3.zero;
+        public Vector3 BackgroundCubeRotation { get { return m_backgroundCubeRotation; } set { m_backgroundCubeRotation = value; } }
 
         static Color ColorIndexAndMagnitudeToRGB(float colorIndex, float apparentMagnitude)
         {
