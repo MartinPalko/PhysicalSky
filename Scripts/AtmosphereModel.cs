@@ -395,7 +395,9 @@ namespace PhysicalSky
 
         public void Compute()
         {
+#if PHYSICAL_SKY_DEBUG
             Debug.Log("Computing Atmospheric Lookup Textures");
+#endif
             float timerStartCompute = Time.realtimeSinceStartup;
 
             if (SystemInfo.graphicsShaderLevel < 50)
@@ -522,13 +524,17 @@ namespace PhysicalSky
             DeltaScatteringDensityTexture.Release();
 
             float timerEndCompute = Time.realtimeSinceStartup;
+#if PHYSICAL_SKY_DEBUG
             Debug.Log("Computed atmospheric lookup textures in " + (timerEndCompute - timerStartCompute) * 1000.0f + "ms");
+#endif
             needsRecompute = false;
         }
 
         public void ReleaseResources()
         {
+#if PHYSICAL_SKY_DEBUG
             Debug.Log("Released Atmosphere Resources");
+#endif
             ReleaseLookupTextures();
             needsRecompute = true;
         }
