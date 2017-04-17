@@ -59,7 +59,7 @@
 				OUT.uv = 0;
 
 				OUT.pos = v.vertex;
-				OUT.pos.w = 1; // No translation for model and view transformations; always be centered around 0
+				OUT.pos.w = 0; // No translation for model and view transformations; always be centered around 0
 				OUT.pos = mul(UNITY_MATRIX_M, OUT.pos); // To world space
 
 				const float3 worldDirection = normalize(OUT.pos).xyz; // Save for later.
