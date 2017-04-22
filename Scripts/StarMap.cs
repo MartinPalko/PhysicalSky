@@ -6,10 +6,16 @@ namespace PhysicalSky
     [CreateAssetMenu(fileName = "NewStarMap", menuName = "PhysicalSky/StarMap")]
     public class StarMap : ScriptableObject
     {
+        public enum CoordinateSpace
+        {
+            J2000,
+            Galactic
+        }
+
         [System.Serializable]
         public struct Star
         {
-            public Vector3 position;
+            public CelestialCoordinates.CartesianCoords coordinate;
             public float apparentMagnitude;
             public float colorIndex;
         }
@@ -39,8 +45,16 @@ namespace PhysicalSky
         public float BackgroundCubeBrightness { get { return m_backgroundCubeBrightness; } set { m_backgroundCubeBrightness = value; } }
 
         [SerializeField]
-        private Vector3 m_backgroundCubeRotation = Vector3.zero;
-        public Vector3 BackgroundCubeRotation { get { return m_backgroundCubeRotation; } set { m_backgroundCubeRotation = value; } }
+        private CoordinateSpace m_backgroundCoordinateSpace = CoordinateSpace.J2000;
+        public CoordinateSpace BackgroundCoordinateSpace { get { return m_backgroundCoordinateSpace; } set { m_backgroundCoordinateSpace = value; } }
+
+        public Matrix4x4 GetBackgroundTransform()
+        {
+            if (BackgroundCoordinateSpace == CoordinateSpace.Galactic)
+                return CelestialCoordinates.Utility.GalacitcToJ2000Transform();
+            else
+                return Matrix4x4.identity;
+        }
 
         static Color ColorIndexAndMagnitudeToRGB(float colorIndex, float apparentMagnitude)
         {
@@ -79,7 +93,7 @@ namespace PhysicalSky
             for (int i = 0; i < numVerts; i++)
             {
                 Star star = m_stars[i + startIndex];
-                verts[i] = star.position;
+                verts[i] = star.coordinate.ToVector3();
                 colors[i] = ColorIndexAndMagnitudeToRGB(star.colorIndex, star.apparentMagnitude);
                 triangles[i] = i; // Just using mesh as a source of verticies to feed the geometry shader, so triangles don't matter.
             }

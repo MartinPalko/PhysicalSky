@@ -90,7 +90,7 @@ namespace PhysicalSky
                     StarMap.Star newStar = new StarMap.Star();
                     try
                     {
-                        newStar.position = new Vector3(float.Parse(splitLine[headerInfo.iX]), float.Parse(splitLine[headerInfo.iY]), float.Parse(splitLine[headerInfo.iZ]));
+                        newStar.coordinate = new CelestialCoordinates.CartesianCoords(float.Parse(splitLine[headerInfo.iX]), float.Parse(splitLine[headerInfo.iY]), float.Parse(splitLine[headerInfo.iZ]));
                     }
                     catch(System.FormatException e)
                     {
@@ -161,7 +161,7 @@ namespace PhysicalSky
             starMap.FirstIsSun = EditorGUILayout.Toggle("Brightest Star is Sun", starMap.FirstIsSun);
             starMap.BackgroundCube = EditorGUILayout.ObjectField("Background Cubemap", starMap.BackgroundCube, typeof(Cubemap), false) as Cubemap;
             starMap.BackgroundCubeBrightness = EditorGUILayout.FloatField("Cubemap Brightness", starMap.BackgroundCubeBrightness);
-            starMap.BackgroundCubeRotation = EditorGUILayout.Vector3Field("Cubemap Rotation", starMap.BackgroundCubeRotation);
+            starMap.BackgroundCoordinateSpace = (StarMap.CoordinateSpace)EditorGUILayout.EnumPopup("Cubemap Orientation", starMap.BackgroundCoordinateSpace);
 
         }
     }

@@ -172,7 +172,7 @@ namespace PhysicalSky
                 {
                     skyMaterial.SetTexture("star_cubemap", starMap.BackgroundCube);
                     skyMaterial.SetFloat("star_brightness", starMap.BackgroundCubeBrightness * starBrightnessMultiplier);
-                    skyMaterial.SetMatrix("star_rotation", Matrix4x4.TRS(Vector3.zero, Quaternion.Euler(starMap.BackgroundCubeRotation) * starMeshObject.transform.rotation, Vector3.one));
+                    skyMaterial.SetMatrix("star_rotation", starMap.GetBackgroundTransform());
                 }
                 else
                 {
@@ -189,7 +189,7 @@ namespace PhysicalSky
             {
                 ConfigureMaterial(starMeshMaterial);
 
-                starMeshMaterial.SetFloat("star_intensity_multiplier", starBrightnessMultiplier);
+                starMeshMaterial.SetFloat("star_intensity_multiplier", starBrightnessMultiplier * SkyExposure);
                 starMeshMaterial.SetFloat("star_intensity_power", starBrightnessPower);
                 
                 float D = atmosphere.PlanetaryRadius + altitude * 1000;
