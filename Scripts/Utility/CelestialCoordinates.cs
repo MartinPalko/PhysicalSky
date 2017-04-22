@@ -167,13 +167,13 @@ namespace PhysicalSky
 
             public static Matrix4x4 GalacitcToJ2000Transform()
             {
-                Vector3 xAxis = ((CartesianCoords)GalacticToJ2000(new CartesianCoords(1.0f, 0.0f, 0.0f))).ToVector3();
+                Vector3 xAxis = ((CartesianCoords)GalacticToJ2000(new CartesianCoords(-1.0f, 0.0f, 0.0f))).ToVector3();
                 Vector3 yAxis = ((CartesianCoords)GalacticToJ2000(new CartesianCoords(0.0f, 1.0f, 0.0f))).ToVector3();
                 Vector3 zAxis = ((CartesianCoords)GalacticToJ2000(new CartesianCoords(0.0f, 0.0f, 1.0f))).ToVector3();
 
-                Debug.DrawRay(Vector3.zero, xAxis, Color.red);
-                Debug.DrawRay(Vector3.zero, yAxis, Color.green);
-                Debug.DrawRay(Vector3.zero, zAxis, Color.blue);
+                //Debug.DrawRay(Vector3.zero, xAxis, Color.red);
+                //Debug.DrawRay(Vector3.zero, yAxis, Color.green);
+                //Debug.DrawRay(Vector3.zero, zAxis, Color.blue);
 
                 Matrix4x4 returnValue = Matrix4x4.identity;
 
