@@ -78,6 +78,7 @@ namespace PhysicalSky
             }
 
             public static implicit operator GeographicCoords(SphericalCoords s) { return new GeographicCoords(s.zenith + (Mathf.Deg2Rad * 90.0f), s.azimuth); }
+            public static implicit operator GeographicCoords(CartesianCoords c) { return (SphericalCoords)c; }
         }
 
         [System.Serializable]
@@ -164,6 +165,33 @@ namespace PhysicalSky
                 return new CartesianCoords((float)x, (float)y, (float)z);
             }
 
+            public static Matrix4x4 GalacitcToJ2000Transform()
+            {
+                Vector3 xAxis = ((CartesianCoords)GalacticToJ2000(new CartesianCoords(1.0f, 0.0f, 0.0f))).ToVector3();
+                Vector3 yAxis = ((CartesianCoords)GalacticToJ2000(new CartesianCoords(0.0f, 1.0f, 0.0f))).ToVector3();
+                Vector3 zAxis = ((CartesianCoords)GalacticToJ2000(new CartesianCoords(0.0f, 0.0f, 1.0f))).ToVector3();
+
+                Debug.DrawRay(Vector3.zero, xAxis, Color.red);
+                Debug.DrawRay(Vector3.zero, yAxis, Color.green);
+                Debug.DrawRay(Vector3.zero, zAxis, Color.blue);
+
+                Matrix4x4 returnValue = Matrix4x4.identity;
+
+                returnValue.m00 = xAxis.x;
+                returnValue.m01 = xAxis.y;
+                returnValue.m02 = xAxis.z;
+
+                returnValue.m10 = yAxis.x;
+                returnValue.m11 = yAxis.y;
+                returnValue.m12 = yAxis.z;
+
+                returnValue.m20 = zAxis.x;
+                returnValue.m21 = zAxis.y;
+                returnValue.m22 = zAxis.z;
+
+                return returnValue;
+            }
+
             public static EquitorialCoordinates GalacticToJ2000(GeographicCoords galactic)
             {
                 //https://gist.github.com/barentsen/2367839#file-ga2equ-py-L15
@@ -179,20 +207,6 @@ namespace PhysicalSky
                 float dec = Mathf.Asin(Mathf.Cos(b) * Mathf.Cos(pole_dec) * Mathf.Sin(l - posangle) + Mathf.Sin(b) * Mathf.Sin(pole_dec));
 
                 return new EquitorialCoordinates((ra * Mathf.Rad2Deg / 360.0f) * 24.0f, dec * Mathf.Rad2Deg);
-
-                //Vector3 xAxis = ((CartesianCoords)new EquitorialCoordinates(21, 12, 1.1f, 48, 19, 47.0f)).ToVector3(); // Galactic Long 90, Lat 0 in J2000
-                //Vector3 yAxis = ((CartesianCoords)new EquitorialCoordinates(17, 45, 37.2f, -28, 56, 10.0f)).ToVector3(); ; // Galactic Long 0, Lat 0 in J2000
-                //Vector3 zAxis = ((CartesianCoords)new EquitorialCoordinates(12, 51, 26.3f, 27, 7, 42.0f)).ToVector3(); ; // Galactic Long 0, Lat 90 in J2000
-
-
-                //Vector3 c = galactic.ToVector3();
-
-                //Vector3 result;
-                //result.x = Vector3.Dot(xAxis, c);
-                //result.y = Vector3.Dot(yAxis, c);
-                //result.z = Vector3.Dot(zAxis, c);
-
-                //return result;
             }
         }
     }
