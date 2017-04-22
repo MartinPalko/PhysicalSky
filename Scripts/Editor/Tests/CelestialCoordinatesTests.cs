@@ -51,20 +51,37 @@ namespace PhysicalSky
         [Test]
         public void GalacticToJ2000()
         {
-            // Test case created from: http://www.robertmartinayers.org/tools/coordinates.html
+            // Test case 1
+            {
+                GeographicCoords testCoord = new GeographicCoords(359.944f * Mathf.Deg2Rad, -0.0461f * Mathf.Deg2Rad);
+                EquitorialCoordinates converted = Utility.GalacticToJ2000(testCoord);
+                converted.ra = roundFloat(converted.ra, 3);
+                converted.dec = roundFloat(converted.dec, 3);
+                converted.d = roundFloat(converted.d, 3);
 
-            GeographicCoords testCoord = new GeographicCoords(359.944f * Mathf.Deg2Rad, -0.0461f * Mathf.Deg2Rad);
-            EquitorialCoordinates converted = Utility.GalacticToJ2000(testCoord);
-            converted.ra = roundFloat(converted.ra, 3);
-            converted.dec = roundFloat(converted.dec, 3);
-            converted.d = roundFloat(converted.d, 3);
+                EquitorialCoordinates answer = new EquitorialCoordinates((266.417f / 360.0f) * 24.0f, -29.008f);
+                answer.ra = roundFloat(answer.ra, 3);
+                answer.dec = roundFloat(answer.dec, 3);
+                answer.d = roundFloat(answer.d, 3);
 
-            EquitorialCoordinates answer = new EquitorialCoordinates((266.417f / 360.0f) * 24.0f, -29.008f);
-            answer.ra = roundFloat(answer.ra, 3);
-            answer.dec = roundFloat(answer.dec, 3);
-            answer.d = roundFloat(answer.d, 3);
+                Assert.AreEqual(answer, converted);
+            }
 
-            Assert.AreEqual(answer, converted);
+            // Test case 2
+            {
+                GeographicCoords testCoord = new GeographicCoords(0.0f * Mathf.Deg2Rad, 0.0f * Mathf.Deg2Rad);
+                EquitorialCoordinates converted = Utility.GalacticToJ2000(testCoord);
+                converted.ra = roundFloat(converted.ra, 3);
+                converted.dec = roundFloat(converted.dec, 3);
+                converted.d = roundFloat(converted.d, 3);
+
+                EquitorialCoordinates answer = new EquitorialCoordinates((266.405f / 360.0f) * 24.0f, -28.936f);
+                answer.ra = roundFloat(answer.ra, 3);
+                answer.dec = roundFloat(answer.dec, 3);
+                answer.d = roundFloat(answer.d, 3);
+
+                Assert.AreEqual(answer, converted);
+            }
         }
 
         [Test]
