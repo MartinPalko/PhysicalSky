@@ -23,40 +23,16 @@ namespace PhysicalSky
                 return "(x" + x + ", y" + y + ", z" + z + ")";
             }
 
-            public static implicit operator CartesianCoords(Vector3 v) { return new CartesianCoords(v.x, v.z, v.y); }
-            public static implicit operator CartesianCoords(SphericalCoords s) { return Utility.SphericalToCartesian(s); }
-            public static implicit operator CartesianCoords(GeographicCoords g) { return Utility.SphericalToCartesian(g); }
-            public static implicit operator CartesianCoords(EquitorialCoordinates e) { return Utility.EquitorialToCartesian(e); }
+            public static implicit operator CartesianCoords(Vector3 v) { return new CartesianCoords(v.x, v.y, v.z); }
+            public static implicit operator CartesianCoords(GeographicCoords g) { return Utility.GeographicToCartesian(g); }
+            public static implicit operator CartesianCoords(HorizontalCoords h) { return Utility.HorizontalToCartesian(h); }
+            public static implicit operator CartesianCoords(EquitorialCoords e) { return Utility.EquitorialToCartesian(e); }
 
             public Vector3 ToVector3()
             {
                 // Cartesian Coords are Z-up, whereas unity is Y-up
-                return new Vector3(x, z, y);
+                return new Vector3(x, y, z);
             }
-        }
-
-        [System.Serializable]
-        public struct SphericalCoords
-        {
-            // Zenith and Azimuth in radians
-            public float zenith;
-            public float azimuth;
-            public float radius;
-
-            public SphericalCoords(float zenith, float azimuth, float radius = 1.0f)
-            {
-                this.radius = radius;
-                this.zenith = zenith;
-                this.azimuth = azimuth;
-            }
-
-            public override string ToString()
-            {
-                return "(zenith" + zenith + ", azimuth" + azimuth + ", radius" + radius + ")";
-            }
-
-            public static implicit operator SphericalCoords(CartesianCoords c) { return Utility.CartesianToSpherical(c); }
-            public static implicit operator SphericalCoords(GeographicCoords g) { return new SphericalCoords((Mathf.Deg2Rad * 90.0f) - g.latitude, g.longitude); }
         }
 
         [System.Serializable]
@@ -76,26 +52,46 @@ namespace PhysicalSky
             {
                 return "(latitude" + latitude + ", longitude" + longitude + ")";
             }
-
-            public static implicit operator GeographicCoords(SphericalCoords s) { return new GeographicCoords(s.zenith + (Mathf.Deg2Rad * 90.0f), s.azimuth); }
-            public static implicit operator GeographicCoords(CartesianCoords c) { return (SphericalCoords)c; }
+            
+            public static implicit operator GeographicCoords(CartesianCoords c) { return Utility.CartesianToGeographic(c); }
         }
 
         [System.Serializable]
-        public struct EquitorialCoordinates
+        public struct HorizontalCoords
+        {
+            // Altitude and Azimuth in radians
+            public float altitude;
+            public float azimuth;
+
+            public HorizontalCoords(float altitude, float azimuth)
+            {
+                this.altitude = altitude;
+                this.azimuth = azimuth;
+            }
+
+            public override string ToString()
+            {
+                return "(altitude" + altitude + ", azimuth" + azimuth + ")";
+            }
+
+            public static implicit operator HorizontalCoords(CartesianCoords c) { return Utility.CartesianToHorizontal(c); }
+        }
+
+        [System.Serializable]
+        public struct EquitorialCoords
         {
             public float ra; // Right Ascension stored in hours, properties provided for minutes, and seconds.            
             public float dec; // Declination stored in degrees, properties provided for arc minutes, and arc seconds.
             public float d; // Distance
 
-            public EquitorialCoordinates(float ra, float dec, float d = 1.0f)
+            public EquitorialCoords(float ra, float dec, float d = 1.0f)
             {
                 this.ra = ra;
                 this.dec = dec;
                 this.d = d;
             }
 
-            public EquitorialCoordinates(int raHours, int raMinutes, float raSeconds, int decDegrees, int decArcMinutes, float decArcSeconds, float distance = 1.0f)
+            public EquitorialCoords(int raHours, int raMinutes, float raSeconds, int decDegrees, int decArcMinutes, float decArcSeconds, float distance = 1.0f)
             {
                 ra = 0.0f;
                 dec = 0.0f;
@@ -131,27 +127,39 @@ namespace PhysicalSky
 
         public static class Utility
         {
-            public static SphericalCoords CartesianToSpherical(CartesianCoords cartesian)
+            public static GeographicCoords CartesianToGeographic(CartesianCoords cartesian)
             {
-                float radius = Mathf.Sqrt(cartesian.x * cartesian.x + cartesian.y * cartesian.y + cartesian.z * cartesian.z);
-                float azimuth = Mathf.Atan2(cartesian.y, cartesian.x);
-                float zenith = Mathf.Acos(cartesian.z / radius);
-
-                return new SphericalCoords(zenith, azimuth, radius);
+                return new GeographicCoords(Mathf.Asin(cartesian.z), Mathf.Atan2(cartesian.y, cartesian.x));
             }
 
-            public static CartesianCoords SphericalToCartesian(SphericalCoords spherical)
+            public static CartesianCoords GeographicToCartesian(GeographicCoords geographic)
             {
-                float sinZenith = Mathf.Sin(spherical.zenith);
+                float cosAltitude = Mathf.Cos(geographic.latitude);
 
-                float x = spherical.radius * sinZenith * Mathf.Cos(spherical.azimuth);
-                float y = spherical.radius * sinZenith * Mathf.Sin(spherical.azimuth);
-                float z = spherical.radius * Mathf.Cos(spherical.zenith);
+                float x = cosAltitude * Mathf.Cos(geographic.longitude);
+                float y = cosAltitude * Mathf.Sin(geographic.longitude);
+                float z = Mathf.Sin(geographic.latitude);
 
                 return new CartesianCoords(x, y, z);
             }
 
-            public static CartesianCoords EquitorialToCartesian(EquitorialCoordinates equitorial)
+            public static HorizontalCoords CartesianToHorizontal(CartesianCoords cartesian)
+            {
+                return new HorizontalCoords(Mathf.Asin(cartesian.z) , Mathf.Atan2(cartesian.y, cartesian.x));
+            }
+
+            public static CartesianCoords HorizontalToCartesian(HorizontalCoords spherical)
+            {
+                float cosAltitude = Mathf.Cos(spherical.altitude);
+
+                float x = cosAltitude * Mathf.Cos(spherical.azimuth);
+                float y = cosAltitude * Mathf.Sin(spherical.azimuth);
+                float z = Mathf.Sin(spherical.altitude);
+
+                return new CartesianCoords(x, y, z);
+            }
+
+            public static CartesianCoords EquitorialToCartesian(EquitorialCoords equitorial)
             {
                 float ra = (equitorial.ra * 15.0f * Mathf.PI) / 180.0f;
                 float dec = (equitorial.dec * Mathf.PI) / 180.0f;
@@ -162,18 +170,18 @@ namespace PhysicalSky
                 float y = d * cosDec * Mathf.Sin(ra);
                 float z = d * Mathf.Sin(dec);
 
-                return new CartesianCoords((float)x, (float)y, (float)z);
+                return new CartesianCoords(x, y, z);
             }
 
             public static Matrix4x4 GalacitcToJ2000Transform()
             {
-                Vector3 xAxis = ((CartesianCoords)GalacticToJ2000(new CartesianCoords(-1.0f, 0.0f, 0.0f))).ToVector3();
-                Vector3 yAxis = ((CartesianCoords)GalacticToJ2000(new CartesianCoords(0.0f, 1.0f, 0.0f))).ToVector3();
+                Vector3 xAxis = ((CartesianCoords)GalacticToJ2000(new CartesianCoords(1.0f, 0.0f, 0.0f))).ToVector3();
+                Vector3 yAxis = ((CartesianCoords)GalacticToJ2000(new CartesianCoords(0.0f, -1.0f, 0.0f))).ToVector3();
                 Vector3 zAxis = ((CartesianCoords)GalacticToJ2000(new CartesianCoords(0.0f, 0.0f, 1.0f))).ToVector3();
 
-                //Debug.DrawRay(Vector3.zero, xAxis, Color.red);
-                //Debug.DrawRay(Vector3.zero, yAxis, Color.green);
-                //Debug.DrawRay(Vector3.zero, zAxis, Color.blue);
+                Debug.DrawRay(Vector3.zero, xAxis, Color.red);
+                Debug.DrawRay(Vector3.zero, yAxis, Color.green);
+                Debug.DrawRay(Vector3.zero, zAxis, Color.blue);
 
                 Matrix4x4 returnValue = Matrix4x4.identity;
 
@@ -192,9 +200,9 @@ namespace PhysicalSky
                 return returnValue;
             }
 
-            public static EquitorialCoordinates GalacticToJ2000(GeographicCoords galactic)
+            public static EquitorialCoords GalacticToJ2000(GeographicCoords galactic)
             {
-                //https://gist.github.com/barentsen/2367839#file-ga2equ-py-L15
+                // https://gist.github.com/barentsen/2367839#file-ga2equ-py-L15
                 float l = galactic.latitude;
                 float b = galactic.longitude;
 
@@ -206,7 +214,7 @@ namespace PhysicalSky
                 float ra = Mathf.Atan2((Mathf.Cos(b) * Mathf.Cos(l - posangle)), (Mathf.Sin(b) * Mathf.Cos(pole_dec) - Mathf.Cos(b) * Mathf.Sin(pole_dec) * Mathf.Sin(l - posangle))) + pole_ra;
                 float dec = Mathf.Asin(Mathf.Cos(b) * Mathf.Cos(pole_dec) * Mathf.Sin(l - posangle) + Mathf.Sin(b) * Mathf.Sin(pole_dec));
 
-                return new EquitorialCoordinates((ra * Mathf.Rad2Deg / 360.0f) * 24.0f, dec * Mathf.Rad2Deg);
+                return new EquitorialCoords((ra * Mathf.Rad2Deg / 360.0f) * 24.0f, dec * Mathf.Rad2Deg);
             }
         }
     }
