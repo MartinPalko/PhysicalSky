@@ -11,6 +11,7 @@ namespace PhysicalSky
 
         string csvPath = "";
         int numberToImport = 4096;
+        bool zUp = true;
         bool warnOnParseError = false;
 
         class HeaderInfo
@@ -60,6 +61,8 @@ namespace PhysicalSky
             }
             GUILayout.EndHorizontal();
             numberToImport = EditorGUILayout.IntField("Number to Import:", numberToImport);
+            zUp = EditorGUILayout.Toggle("Z Up:", zUp);
+
             warnOnParseError = EditorGUILayout.Toggle("Warn on parse error: ", warnOnParseError);
 
             GUILayout.Space(5);
@@ -90,7 +93,11 @@ namespace PhysicalSky
                     StarMap.Star newStar = new StarMap.Star();
                     try
                     {
-                        newStar.coordinate = new CelestialCoordinates.CartesianCoords(float.Parse(splitLine[headerInfo.iX]), float.Parse(splitLine[headerInfo.iY]), float.Parse(splitLine[headerInfo.iZ]));
+                        float parsedX = float.Parse(splitLine[headerInfo.iX]);
+                        float parsedY = float.Parse(splitLine[headerInfo.iY]);
+                        float parsedZ = float.Parse(splitLine[headerInfo.iZ]);
+
+                        newStar.coordinate = new CelestialCoordinates.CartesianCoords(parsedX, zUp ? parsedZ : parsedY, zUp ? parsedY : parsedZ);
                     }
                     catch(System.FormatException e)
                     {
@@ -160,9 +167,10 @@ namespace PhysicalSky
 
             starMap.FirstIsSun = EditorGUILayout.Toggle("Brightest Star is Sun", starMap.FirstIsSun);
             starMap.BackgroundCube = EditorGUILayout.ObjectField("Background Cubemap", starMap.BackgroundCube, typeof(Cubemap), false) as Cubemap;
+            starMap.BackgroundRotation = EditorGUILayout.Vector3Field("Cubemap Rotation", starMap.BackgroundRotation);
             starMap.BackgroundCubeBrightness = EditorGUILayout.FloatField("Cubemap Brightness", starMap.BackgroundCubeBrightness);
-            starMap.BackgroundCoordinateSpace = (StarMap.CoordinateSpace)EditorGUILayout.EnumPopup("Cubemap Orientation", starMap.BackgroundCoordinateSpace);
 
+            EditorUtility.SetDirty(starMap);
         }
     }
 }

@@ -41,20 +41,12 @@ namespace PhysicalSky
         public Cubemap BackgroundCube { get { return m_backgroundCube; } set { m_backgroundCube = value; } }
 
         [SerializeField]
-        private float m_backgroundCubeBrightness = 0.1f;
-        public float BackgroundCubeBrightness { get { return m_backgroundCubeBrightness; } set { m_backgroundCubeBrightness = value; } }
+        private Vector3 m_backgroundRotation;
+        public Vector3 BackgroundRotation { get { return m_backgroundRotation; } set { m_backgroundRotation = value; } }
 
         [SerializeField]
-        private CoordinateSpace m_backgroundCoordinateSpace = CoordinateSpace.J2000;
-        public CoordinateSpace BackgroundCoordinateSpace { get { return m_backgroundCoordinateSpace; } set { m_backgroundCoordinateSpace = value; } }
-
-        public Matrix4x4 GetBackgroundTransform()
-        {
-            if (BackgroundCoordinateSpace == CoordinateSpace.Galactic)
-                return CelestialCoordinates.Utility.GalacitcToJ2000Transform();
-            else
-                return Matrix4x4.identity;
-        }
+        private float m_backgroundCubeBrightness = 0.1f;
+        public float BackgroundCubeBrightness { get { return m_backgroundCubeBrightness; } set { m_backgroundCubeBrightness = value; } }
 
         static Color ColorIndexAndMagnitudeToRGB(float colorIndex, float apparentMagnitude)
         {

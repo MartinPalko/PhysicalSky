@@ -172,7 +172,7 @@ namespace PhysicalSky
                 {
                     skyMaterial.SetTexture("star_cubemap", starMap.BackgroundCube);
                     skyMaterial.SetFloat("star_brightness", starMap.BackgroundCubeBrightness * starBrightnessMultiplier);
-                    skyMaterial.SetMatrix("star_rotation", starMap.GetBackgroundTransform());
+                    skyMaterial.SetMatrix("star_rotation", Matrix4x4.TRS(Vector3.zero, Quaternion.Euler(starMap.BackgroundRotation), Vector3.one));
                 }
                 else
                 {
