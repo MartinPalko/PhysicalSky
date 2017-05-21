@@ -159,11 +159,13 @@ namespace PhysicalSky
                 averageRadiance /= 3000; // Arbitrary value scales down to unity's lighting.
                 averageRadiance *= SunLightBrightnessMultiplier;
 
-                Utilities.HSBColor hsbLightColor = new Utilities.HSBColor(averageRadiance);
-                sunLight.intensity = hsbLightColor.b;
-                hsbLightColor.b = 1.0f;
-                hsbLightColor.s = Mathf.Clamp01(hsbLightColor.s * SunSaturationMultiplier);
-                sunLight.color = hsbLightColor.ToColor().gamma;
+                // Set directional sunlight based on average radiance.
+                {
+                    float hue, saturation, value;
+                    Color.RGBToHSV(averageRadiance, out hue, out saturation, out value);
+                    sunLight.intensity = value;
+                    sunLight.color = Color.HSVToRGB(hue, saturation * SunSaturationMultiplier, 1.0f).gamma;
+                }
             }
 
             // Assign sky material as skybox.
