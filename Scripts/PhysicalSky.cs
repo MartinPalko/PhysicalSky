@@ -104,7 +104,7 @@ namespace PhysicalSky
             m.SetVector("camera", new Vector3(0, (atmosphere.PlanetaryRadius / 1000) + altitude, 0));
         }
 
-        private void Update()
+        private void LateUpdate()
         {
 #if UNITY_EDITOR
             if (!Application.isPlaying)
