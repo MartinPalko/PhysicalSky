@@ -13,7 +13,8 @@ namespace PhysicalSky
             if (!physicalSky)
                 return;
 
-            physicalSky.SunBrightnessMultiplier = EditorGUILayout.FloatField("Sun Light Brightness", physicalSky.SunBrightnessMultiplier);
+            physicalSky.SunLightBrightnessMultiplier = EditorGUILayout.FloatField("Sun Light Brightness", physicalSky.SunLightBrightnessMultiplier);
+            physicalSky.SunBrightnessMultiplier = EditorGUILayout.FloatField("Sun Brightness", physicalSky.SunBrightnessMultiplier);
             physicalSky.SkyExposure = EditorGUILayout.FloatField("Sky Exposure", physicalSky.SkyExposure);
             physicalSky.Altitude = EditorGUILayout.FloatField("Altitude (km)", physicalSky.Altitude);
             physicalSky.Atmosphere = EditorGUILayout.ObjectField("Atmosphere Model", physicalSky.Atmosphere as AtmosphereModel, typeof(AtmosphereModel), false) as IAtmosphereModel;

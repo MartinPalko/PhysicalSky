@@ -28,6 +28,7 @@
 			uniform float3 sun_radiance;
 			uniform float3 sun_size;
 			uniform float sky_exposure;
+			uniform float sun_brightness;
 
 			uniform samplerCUBE star_cubemap;
 			uniform float star_brightness;
@@ -82,6 +83,8 @@
 				{
 					radiance += transmittance * sun_radiance;
 				}
+
+				radiance *= sun_brightness;
 
 				radiance += texCUBE(star_cubemap, mul(view_ray, star_rotation)).rgb * star_brightness * transmittance;
 

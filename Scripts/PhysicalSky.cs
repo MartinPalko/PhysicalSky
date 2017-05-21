@@ -8,6 +8,10 @@ namespace PhysicalSky
     {
         public Vector3 SunDirection { get { return -transform.forward; } set { transform.rotation = Quaternion.LookRotation(-value); } }
         public Quaternion StarRotation { get { return starMeshObject.transform.rotation; } set { starMeshObject.transform.rotation = value; } }
+        
+        [SerializeField]
+        float sunLightBrightnessMultiplier = 1.0f;
+        public float SunLightBrightnessMultiplier { get { return sunLightBrightnessMultiplier; } set { sunLightBrightnessMultiplier = Mathf.Max(value, 0.0f); } }
 
         [SerializeField]
         float sunBrightnessMultiplier = 1.0f;
@@ -153,7 +157,7 @@ namespace PhysicalSky
                 }
                 Color averageRadiance = radianceSum / nonZero;
                 averageRadiance /= 3000; // Arbitrary value scales down to unity's lighting.
-                averageRadiance *= SunBrightnessMultiplier;
+                averageRadiance *= SunLightBrightnessMultiplier;
 
                 Utilities.HSBColor hsbLightColor = new Utilities.HSBColor(averageRadiance);
                 sunLight.intensity = hsbLightColor.b;
@@ -167,12 +171,13 @@ namespace PhysicalSky
             {
                 ConfigureMaterial(skyMaterial);
                 skyMaterial.SetFloat("sky_exposure", SkyExposure);
+                skyMaterial.SetFloat("sun_brightness", SunBrightnessMultiplier);
 
                 if (starMap)
                 {
                     skyMaterial.SetTexture("star_cubemap", starMap.BackgroundCube);
                     skyMaterial.SetFloat("star_brightness", starMap.BackgroundCubeBrightness * starBrightnessMultiplier);
-                    skyMaterial.SetMatrix("star_rotation", Matrix4x4.TRS(Vector3.zero, Quaternion.Euler(starMap.BackgroundRotation), Vector3.one));
+                    skyMaterial.SetMatrix("star_rotation", Matrix4x4.TRS(Vector3.zero, StarRotation * Quaternion.Euler(starMap.BackgroundRotation), Vector3.one));
                 }
                 else
                 {
