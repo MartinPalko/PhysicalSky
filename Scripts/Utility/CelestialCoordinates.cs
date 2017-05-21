@@ -1,4 +1,6 @@
 ﻿using UnityEngine;
+using Math = System.Math;
+using DateTime = System.DateTime;
 
 namespace PhysicalSky
 {
@@ -7,15 +9,22 @@ namespace PhysicalSky
         [System.Serializable]
         public struct CartesianCoords
         {
-            public float x;
-            public float y;
-            public float z;
+            public double x;
+            public double y;
+            public double z;
 
-            public CartesianCoords(float x, float y, float z)
+            public CartesianCoords(double x, double y, double z)
             {
                 this.x = x;
                 this.y = y;
                 this.z = z;
+            }
+
+            public CartesianCoords(Vector3 v)
+            {
+                x = v.x;
+                y = v.y;
+                z = v.z;
             }
 
             public override string ToString()
@@ -31,7 +40,7 @@ namespace PhysicalSky
             public Vector3 ToVector3()
             {
                 // Cartesian Coords are Z-up, whereas unity is Y-up
-                return new Vector3(x, y, z);
+                return new Vector3((float)x, (float)y, (float)z);
             }
         }
 
@@ -39,10 +48,10 @@ namespace PhysicalSky
         public struct GeographicCoords
         {
             // Latitude and Longitude in radians
-            public float latitude;
-            public float longitude;
+            public double latitude;
+            public double longitude;
 
-            public GeographicCoords(float latitude, float longitude)
+            public GeographicCoords(double latitude, double longitude)
             {
                 this.latitude = latitude;
                 this.longitude = longitude;
@@ -60,10 +69,10 @@ namespace PhysicalSky
         public struct HorizontalCoords
         {
             // Altitude and Azimuth in radians
-            public float altitude;
-            public float azimuth;
+            public double altitude;
+            public double azimuth;
 
-            public HorizontalCoords(float altitude, float azimuth)
+            public HorizontalCoords(double altitude, double azimuth)
             {
                 this.altitude = altitude;
                 this.azimuth = azimuth;
@@ -71,7 +80,7 @@ namespace PhysicalSky
 
             public override string ToString()
             {
-                return "(altitude" + altitude + ", azimuth" + azimuth + ")";
+                return "(altitude " + altitude + ", azimuth " + azimuth + ")";
             }
 
             public static implicit operator HorizontalCoords(CartesianCoords c) { return Utility.CartesianToHorizontal(c); }
@@ -80,21 +89,34 @@ namespace PhysicalSky
         [System.Serializable]
         public struct EquitorialCoords
         {
-            public float ra; // Right Ascension stored in hours, properties provided for minutes, and seconds.            
-            public float dec; // Declination stored in degrees, properties provided for arc minutes, and arc seconds.
-            public float d; // Distance
+            public double ra; // Right Ascension stored in hours, properties provided for minutes, and seconds.            
+            public double dec; // Declination stored in degrees, properties provided for arc minutes, and arc seconds.
+            public double d; // Distance
 
-            public EquitorialCoords(float ra, float dec, float d = 1.0f)
+            // ra and dec in Radians
+            public double raRad
+            {
+                get { return ra * (Math.PI / 12.0); }
+                set { ra = value / (Mathf.PI / 12.0); }
+            }
+
+            public double decRad
+            {
+                get { return dec * Utility.Deg2Rad; }
+                set { dec = value * Utility.Rad2Deg; }
+            }
+
+            public EquitorialCoords(double ra, double dec, double d = 1.0)
             {
                 this.ra = ra;
                 this.dec = dec;
                 this.d = d;
             }
 
-            public EquitorialCoords(int raHours, int raMinutes, float raSeconds, int decDegrees, int decArcMinutes, float decArcSeconds, float distance = 1.0f)
+            public EquitorialCoords(int raHours, int raMinutes, double raSeconds, int decDegrees, int decArcMinutes, double decArcSeconds, double distance = 1.0f)
             {
-                ra = 0.0f;
-                dec = 0.0f;
+                ra = 0.0;
+                dec = 0.0;
                 d = distance;
 
                 SetRA(raHours, raMinutes, raSeconds);
@@ -107,77 +129,89 @@ namespace PhysicalSky
             }
 
             public int RAHours { get { return (int)(ra); } }
-            public int RAMinutes { get { return (int)((ra * 60.0f) % 60.0f); } }
-            public float RASeconds { get { return (float)((ra * 60.0f * 60.0f) % 60.0f); } }
+            public int RAMinutes { get { return (int)((ra * 60.0) % 60.0); } }
+            public double RASeconds { get { return (double)((ra * 60.0 * 60.0) % 60.0); } }
 
             public int DecDegrees { get { return (int)(dec); } }
-            public int DecArcMin { get { return (int)((dec * 60.0f) % 60.0f); } }
-            public float DecArcSeconds { get { return (float)((dec * 60.0f * 60.0f) % 60.0f); } }
+            public int DecArcMin { get { return (int)((dec * 60.0) % 60.0); } }
+            public double DecArcSeconds { get { return (double)((dec * 60.0 * 60.0) % 60.0); } }
 
-            public void SetRA(int hours, int minutes, float seconds)
+            public void SetRA(int hours, int minutes, double seconds)
             {
-                ra = (hours + minutes / 60.0f + seconds / (60.0f * 60.0f));
+                ra = (hours + minutes / 60.0 + seconds / (60.0 * 60.0));
             }
 
-            public void SetDec(int degrees, int arcMinutes, float arcSeconds)
+            public void SetDec(int degrees, int arcMinutes, double arcSeconds)
             {
-                dec = (degrees + arcMinutes / 60.0f + arcSeconds / (60.0f * 60.0f));
+                dec = (degrees + arcMinutes / 60.0 + arcSeconds / (60.0 * 60.0));
             }
+
+            public static implicit operator EquitorialCoords(CartesianCoords c) { return Utility.CartesianToEquitorial(c); }
         }
 
         public static class Utility
         {
+            public const double twoPI = Math.PI * 2.0;
+            public const double twoPIf = Mathf.PI * 2.0;
+            public const double Deg2Rad = Math.PI / 180.0;
+            public const double Rad2Deg = 180.0 / Math.PI;
+
             public static GeographicCoords CartesianToGeographic(CartesianCoords cartesian)
             {
-                return new GeographicCoords(Mathf.Asin(cartesian.z), Mathf.Atan2(cartesian.y, cartesian.x));
+                return new GeographicCoords(Math.Asin(cartesian.z), Math.Atan2(cartesian.y, cartesian.x));
             }
 
             public static CartesianCoords GeographicToCartesian(GeographicCoords geographic)
             {
-                float cosAltitude = Mathf.Cos(geographic.latitude);
+                double cosAltitude = Math.Cos(geographic.latitude);
 
-                float x = cosAltitude * Mathf.Cos(geographic.longitude);
-                float y = cosAltitude * Mathf.Sin(geographic.longitude);
-                float z = Mathf.Sin(geographic.latitude);
+                double x = cosAltitude * Math.Cos(geographic.longitude);
+                double y = cosAltitude * Math.Sin(geographic.longitude);
+                double z = Math.Sin(geographic.latitude);
 
                 return new CartesianCoords(x, y, z);
             }
 
             public static HorizontalCoords CartesianToHorizontal(CartesianCoords cartesian)
             {
-                return new HorizontalCoords(Mathf.Asin(cartesian.z) , Mathf.Atan2(cartesian.y, cartesian.x));
+                return new HorizontalCoords(Math.Asin(cartesian.z) , Math.Atan2(cartesian.y, cartesian.x));
             }
 
-            public static CartesianCoords HorizontalToCartesian(HorizontalCoords spherical)
+            public static CartesianCoords HorizontalToCartesian(HorizontalCoords horizontal)
             {
-                float cosAltitude = Mathf.Cos(spherical.altitude);
+                double cosAltitude = Math.Cos(horizontal.altitude);
 
-                float x = cosAltitude * Mathf.Cos(spherical.azimuth);
-                float y = cosAltitude * Mathf.Sin(spherical.azimuth);
-                float z = Mathf.Sin(spherical.altitude);
+                double x = cosAltitude * Math.Cos(horizontal.azimuth);
+                double y = cosAltitude * Math.Sin(horizontal.azimuth);
+                double z = Math.Sin(horizontal.altitude);
 
                 return new CartesianCoords(x, y, z);
             }
 
             public static CartesianCoords EquitorialToCartesian(EquitorialCoords equitorial)
             {
-                float ra = (equitorial.ra * 15.0f * Mathf.PI) / 180.0f;
-                float dec = (equitorial.dec * Mathf.PI) / 180.0f;
-                float d = equitorial.d;
-                float cosDec = Mathf.Cos(dec);
+                double ra = equitorial.raRad;
+                double dec = equitorial.decRad;
+                double d = equitorial.d;
+                double cosDec = Math.Cos(dec);
 
-                float x = d * cosDec * Mathf.Cos(ra);
-                float y = d * cosDec * Mathf.Sin(ra);
-                float z = d * Mathf.Sin(dec);
+                double x = d * cosDec * Math.Cos(ra);
+                double y = d * cosDec * Math.Sin(ra);
+                double z = d * Math.Sin(dec);
 
                 return new CartesianCoords(x, y, z);
             }
 
+            public static EquitorialCoords CartesianToEquitorial(CartesianCoords cartesian)
+            {
+                throw new System.NotImplementedException();
+            }
+
             public static Matrix4x4 GalacitcToJ2000Transform()
             {
-                Vector3 xAxis = ((CartesianCoords)GalacticToJ2000(new CartesianCoords(1.0f, 0.0f, 0.0f))).ToVector3();
-                Vector3 yAxis = ((CartesianCoords)GalacticToJ2000(new CartesianCoords(0.0f, -1.0f, 0.0f))).ToVector3();
-                Vector3 zAxis = ((CartesianCoords)GalacticToJ2000(new CartesianCoords(0.0f, 0.0f, 1.0f))).ToVector3();
+                Vector3 xAxis = ((CartesianCoords)GalacticToJ2000(new CartesianCoords(1.0, 0.0, 0.0))).ToVector3();
+                Vector3 yAxis = ((CartesianCoords)GalacticToJ2000(new CartesianCoords(0.0, -1.0, 0.0))).ToVector3();
+                Vector3 zAxis = ((CartesianCoords)GalacticToJ2000(new CartesianCoords(0.0, 0.0, 1.0))).ToVector3();
 
                 Debug.DrawRay(Vector3.zero, xAxis, Color.red);
                 Debug.DrawRay(Vector3.zero, yAxis, Color.green);
@@ -203,18 +237,91 @@ namespace PhysicalSky
             public static EquitorialCoords GalacticToJ2000(GeographicCoords galactic)
             {
                 // https://gist.github.com/barentsen/2367839#file-ga2equ-py-L15
-                float l = galactic.latitude;
-                float b = galactic.longitude;
+                double l = galactic.latitude;
+                double b = galactic.longitude;
 
                 // North galactic pole (J2000)
-                float pole_ra = 192.859508f * Mathf.Deg2Rad;
-                float pole_dec = 27.128336f * Mathf.Deg2Rad;
-                float posangle = (122.932f - 90.0f) * Mathf.Deg2Rad;
+                double pole_ra = 192.859508 * Mathf.Deg2Rad;
+                double pole_dec = 27.128336 * Mathf.Deg2Rad;
+                double posangle = (122.932 - 90.0) * Mathf.Deg2Rad;
 
-                float ra = Mathf.Atan2((Mathf.Cos(b) * Mathf.Cos(l - posangle)), (Mathf.Sin(b) * Mathf.Cos(pole_dec) - Mathf.Cos(b) * Mathf.Sin(pole_dec) * Mathf.Sin(l - posangle))) + pole_ra;
-                float dec = Mathf.Asin(Mathf.Cos(b) * Mathf.Cos(pole_dec) * Mathf.Sin(l - posangle) + Mathf.Sin(b) * Mathf.Sin(pole_dec));
+                double ra = Math.Atan2((Math.Cos(b) * Math.Cos(l - posangle)), (Math.Sin(b) * Math.Cos(pole_dec) - Math.Cos(b) * Math.Sin(pole_dec) * Math.Sin(l - posangle))) + pole_ra;
+                double dec = Math.Asin(Math.Cos(b) * Math.Cos(pole_dec) * Math.Sin(l - posangle) + Math.Sin(b) * Math.Sin(pole_dec));
 
-                return new EquitorialCoords((ra * Mathf.Rad2Deg / 360.0f) * 24.0f, dec * Mathf.Rad2Deg);
+                return new EquitorialCoords((ra * Mathf.Rad2Deg / 360.0) * 24.0, dec * Mathf.Rad2Deg);
+            }
+
+            public static HorizontalCoords EquitorialToHorizontal(EquitorialCoords equitorial, GeographicCoords observer, DateTime time)
+            {
+                // http://www.convertalot.com/celestial_horizon_co-ordinates_calculator.html
+
+                double ra = equitorial.raRad;
+                double dec = equitorial.decRad;
+
+                double lat = observer.latitude;
+                double lon = observer.longitude;
+
+                var ha = MeanSiderealTime(time, lon) - ra;
+                if (ha < 0)
+                    ha += twoPI;
+
+                var sin_alt = Math.Sin(dec) * Math.Sin(lat) + Math.Cos(dec) * Math.Cos(lat) * Math.Cos(ha);
+                var alt = Math.Asin(sin_alt);
+
+                // compute azimuth in radians
+                // divide by zero error at poles or if alt = 90 deg
+                var cos_az = (Math.Sin(dec) - Math.Sin(alt) * Math.Sin(lat)) / (Math.Cos(alt) * Math.Cos(lat));
+                var az = Math.Acos(cos_az);
+
+                var hrz_altitude = alt;
+                var hrz_azimuth = az;
+
+                // choose hemisphere
+                if (Math.Sin(ha) > 0)
+                    hrz_azimuth = (twoPI) - hrz_azimuth;
+
+                return new HorizontalCoords(hrz_altitude, hrz_azimuth);
+            }
+
+            public static double MeanSiderealTime(DateTime time, double longitude = 0.0)
+            {
+                double lon = longitude * (180.0 / Math.PI); // Rad to deg
+
+                int year = time.Year;
+                int month = time.Month;
+                int day = time.Day;
+                int hour = time.Hour;
+                int minute = time.Minute;
+                int second = time.Second;
+
+                if ((month == 1) || (month == 2))
+                {
+                    year = year - 1;
+                    month = month + 12;
+                }
+
+                var a = Math.Floor(year / 100.0);
+                var b = 2 - a + Math.Floor(a / 4.0);
+                var c = Math.Floor(365.25 * year);
+                var d = Math.Floor(30.6001 * (month + 1));
+
+                // Days since J2000.0
+                var jd = b + c + d - 730550.5 + day + (hour + minute / 60.0 + second / 3600.0) / 24.0;
+
+                // Julian centuries since J2000.0
+                var jt = jd / 36525.0;
+
+                // The mean sidereal time in degrees
+                var mst = 280.46061837 + 360.98564736629 * jd + 0.000387933 * jt * jt - jt * jt * jt / 38710000 + lon;
+
+                // In degrees modulo 360.0
+                if (mst > 0.0)
+                    while (mst > 360.0) mst = mst - 360.0;
+                else
+                    while (mst < 0.0) mst = mst + 360.0;
+
+                return Math.PI * mst / 180.0; // Deg to rad
+
             }
         }
     }
