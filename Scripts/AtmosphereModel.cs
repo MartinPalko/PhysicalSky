@@ -17,213 +17,213 @@ namespace PhysicalSky
             MultipleScattering = 5
         }
         
-        private bool needsRecompute = true;
-        public bool NeedsRecompute { get { return needsRecompute || TexturesInvalid(); } }
+        private bool m_needsRecompute = true;
+        public bool NeedsRecompute { get { return m_needsRecompute || TexturesInvalid(); } }
 
         [SerializeField]
-        private float constantSolarIrradiance = 1.5f;
+        private float m_constantSolarIrradiance = 1.5f;
         public float ConstantSolarIrradiance
         {
-            get { return constantSolarIrradiance; }
+            get { return m_constantSolarIrradiance; }
             set
             {
-                if (constantSolarIrradiance != value)
+                if (m_constantSolarIrradiance != value)
                 {
-                    constantSolarIrradiance = value;
-                    needsRecompute = true;
+                    m_constantSolarIrradiance = value;
+                    m_needsRecompute = true;
                 }
             }
         }
 
         [SerializeField]
-        private float sunAngularRadius = 0.00872665f;
+        private float m_sunAngularRadius = 0.00872665f;
         public float SunAngularRadius
         {
-            get { return sunAngularRadius; }
+            get { return m_sunAngularRadius; }
             set
             {
-                if (sunAngularRadius != value)
+                if (m_sunAngularRadius != value)
                 {
-                    sunAngularRadius = value;
-                    needsRecompute = true;
+                    m_sunAngularRadius = value;
+                    m_needsRecompute = true;
                 }
             }
         }
 
         [SerializeField]
-        private float planetaryRadius = 6360000.0f;
+        private float m_planetaryRadius = 6360000.0f;
         public float PlanetaryRadius
         {
             get
             {
-                return planetaryRadius;
+                return m_planetaryRadius;
             }
             set
             {
                 float thickness = AtmosphereThickness;
-                planetaryRadius = value;
+                m_planetaryRadius = value;
                 AtmosphereThickness = thickness;
             }
         }
 
         [SerializeField]
-        private float atmosphereThickness = 60000.0f;
+        private float m_atmosphereThickness = 60000.0f;
         public float AtmosphereThickness
         {
-            get { return atmosphereThickness; }
+            get { return m_atmosphereThickness; }
             set
             {
                 float newValue = Math.Max(value, 0);
-                if (newValue != atmosphereThickness)
+                if (newValue != m_atmosphereThickness)
                 {
-                    atmosphereThickness = newValue;
-                    needsRecompute = true;
+                    m_atmosphereThickness = newValue;
+                    m_needsRecompute = true;
                 }
 
             }
         }
 
         [SerializeField]
-        private float rayleigh = 1.24062e-6f;
+        private float m_rayleigh = 1.24062e-6f;
         public float Rayleigh
         {
-            get { return rayleigh; }
+            get { return m_rayleigh; }
             set
             {
-                if (rayleigh != value)
+                if (m_rayleigh != value)
                 {
-                    rayleigh = value;
-                    needsRecompute = true;
+                    m_rayleigh = value;
+                    m_needsRecompute = true;
                 }
             }
         }
 
         [SerializeField]
-        private float rayleighScaleHeight = 8000.0f;
+        private float m_rayleighScaleHeight = 8000.0f;
         public float RayleighScaleHeight
         {
-            get { return rayleighScaleHeight; }
+            get { return m_rayleighScaleHeight; }
             set
             {
-                if (rayleighScaleHeight != value)
+                if (m_rayleighScaleHeight != value)
                 {
-                    rayleighScaleHeight = value;
-                    needsRecompute = true;
+                    m_rayleighScaleHeight = value;
+                    m_needsRecompute = true;
                 }
             }
         }
 
         [SerializeField]
-        private float mieScaleHeight = 1200.0f;
+        private float m_mieScaleHeight = 1200.0f;
         public float MieScaleHeight
         {
-            get { return mieScaleHeight; }
+            get { return m_mieScaleHeight; }
             set
             {
-                if (mieScaleHeight != value)
+                if (m_mieScaleHeight != value)
                 {
-                    mieScaleHeight = value;
-                    needsRecompute = true;
+                    m_mieScaleHeight = value;
+                    m_needsRecompute = true;
                 }
             }
         }
 
         [SerializeField]
-        private float mieAngstromAlpha = 0.0f;
+        private float m_mieAngstromAlpha = 0.0f;
         public float MieAngstromAlpha
         {
-            get { return mieAngstromAlpha; }
+            get { return m_mieAngstromAlpha; }
             set
             {
-                if (mieAngstromAlpha != value)
+                if (m_mieAngstromAlpha != value)
                 {
-                    mieAngstromAlpha = value;
-                    needsRecompute = true;
+                    m_mieAngstromAlpha = value;
+                    m_needsRecompute = true;
                 }
             }
         }
 
         [SerializeField]
-        private float mieAngstromBeta = 5.328e-3f;
+        private float m_mieAngstromBeta = 5.328e-3f;
         public float MieAngstromBeta
         {
-            get { return mieAngstromBeta; }
+            get { return m_mieAngstromBeta; }
             set
             {
-                if (mieAngstromBeta != value)
+                if (m_mieAngstromBeta != value)
                 {
-                    mieAngstromBeta = value;
-                    needsRecompute = true;
+                    m_mieAngstromBeta = value;
+                    m_needsRecompute = true;
                 }
             }
         }
 
         [SerializeField]
-        private float mieSingleScatteringAlbedo = 0.9f;
+        private float m_mieSingleScatteringAlbedo = 0.9f;
         public float MieSingleScatteringAlbedo
         {
-            get { return mieSingleScatteringAlbedo; }
+            get { return m_mieSingleScatteringAlbedo; }
             set
             {
-                if (mieSingleScatteringAlbedo != value)
+                if (m_mieSingleScatteringAlbedo != value)
                 {
-                    mieSingleScatteringAlbedo = value;
-                    needsRecompute = true;
+                    m_mieSingleScatteringAlbedo = value;
+                    m_needsRecompute = true;
                 }
             }
         }
 
         [SerializeField]
-        private float miePhaseFunctionG = 0.8f;
+        private float m_miePhaseFunctionG = 0.8f;
         public float MiePhaseFunctionG
         {
-            get { return miePhaseFunctionG; }
+            get { return m_miePhaseFunctionG; }
             set
             {
-                if (miePhaseFunctionG != value)
+                if (m_miePhaseFunctionG != value)
                 {
-                    miePhaseFunctionG = value;
-                    needsRecompute = true;
+                    m_miePhaseFunctionG = value;
+                    m_needsRecompute = true;
                 }
             }
         }
 
         [SerializeField]
-        private float groundAlbedo = 0.1f;
+        private float m_groundAlbedo = 0.1f;
         public float GroundAlbedo
         {
-            get { return groundAlbedo; }
+            get { return m_groundAlbedo; }
             set
             {
-                if (groundAlbedo != value)
+                if (m_groundAlbedo != value)
                 {
-                    groundAlbedo = value;
-                    needsRecompute = true;
+                    m_groundAlbedo = value;
+                    m_needsRecompute = true;
                 }
             }
         }
 
         [SerializeField]
-        private float maxSunZenithAngle = 102.0f / 180.0f * Mathf.PI;
+        private float m_maxSunZenithAngle = 102.0f / 180.0f * Mathf.PI;
         public float MaxSunZenithAngle
         {
-            get { return maxSunZenithAngle; }
+            get { return m_maxSunZenithAngle; }
             set
             {
-                if (maxSunZenithAngle != value)
+                if (m_maxSunZenithAngle != value)
                 {
-                    maxSunZenithAngle = value;
-                    needsRecompute = true;
+                    m_maxSunZenithAngle = value;
+                    m_needsRecompute = true;
                 }
             }
         }
 
         // Constants
-        const bool use_constant_solar_spectrum_ = true;
+        const bool USE_CONSTANT_SOLAR_SPECTRUM = true;
 
-        const float kLambdaR = 680.0f;
-        const float kLambdaG = 550.0f;
-        const float kLambdaB = 440.0f;
+        const float LAMBDA_R = 680.0f;
+        const float LAMBDA_G = 550.0f;
+        const float LAMBDA_B = 440.0f;
 
         // TODO: Try changing to half or float
         const RenderTextureFormat LUT_FORMAT = RenderTextureFormat.ARGBFloat;
@@ -241,13 +241,12 @@ namespace PhysicalSky
         const int IRRADIANCE_TEXTURE_WIDTH = 64;
         const int IRRADIANCE_TEXTURE_HEIGHT = 16;
 
-        // TODO: Make customizable?
+        // TODO: Make num scattering orders customizable?
         const int NUM_SCATTERING_ORDERS = 4;
-        const float kLengthUnitInMeters = 1000.0f;
-        const int kLambdaMin = 360;
-        const int kLambdaMax = 830;
-        [NonSerialized]
-        float[] kSolarIrradiance = {
+        const float LENGTH_UNIT_IN_METERS = 1000.0f;
+        const int LAMBDA_MIN = 360;
+        const int LAMBDA_MAX = 830;
+        static readonly float[] SOLOAR_IRRADIANCE = {
     1.11776f, 1.14259f, 1.01249f, 1.14716f, 1.72765f, 1.73054f, 1.6887f, 1.61253f,
     1.91198f, 2.03474f, 2.02042f, 2.02212f, 1.93377f, 1.95809f, 1.91686f, 1.8298f,
     1.8685f, 1.8931f, 1.85149f, 1.8504f, 1.8341f, 1.8345f, 1.8147f, 1.78158f, 1.7533f,
@@ -258,39 +257,38 @@ namespace PhysicalSky
 
         // Computed values
         [NonSerialized]
-        private float kSunSolidAngle;
+        private float m_sunSolidAngle;
         [NonSerialized]
-        private List<float> wavelengths = new List<float>();
+        private List<float> m_wavelengths = new List<float>();
         [NonSerialized]
-        private List<float> solar_irradiance = new List<float>();
+        private List<float> m_solarIrradiance = new List<float>();
         [NonSerialized]
-        private List<float> rayleigh_scattering = new List<float>();
+        private List<float> m_rayleighScattering = new List<float>();
         [NonSerialized]
-        private List<float> mie_scattering = new List<float>();
+        private List<float> m_mieScattering = new List<float>();
         [NonSerialized]
-        private List<float> mie_extinction = new List<float>();
-        [NonSerialized]
-        private List<float> ground_albedo = new List<float>();
+        private List<float> m_mieExtinction = new List<float>();
 
         // Computed textures
         [NonSerialized]
-        private RenderTexture transmittanceLUT = null;
-        public RenderTexture TransmittanceLUT { get { return transmittanceLUT; } }
+        private RenderTexture m_transmittanceLUT = null;
+        public RenderTexture TransmittanceLUT { get { return m_transmittanceLUT; } }
 
         [NonSerialized]
-        private RenderTexture scatteringLUT = null;
-        public RenderTexture ScatteringLUT { get { return scatteringLUT; } }
+        private RenderTexture m_scatteringLUT = null;
+        public RenderTexture ScatteringLUT { get { return m_scatteringLUT; } }
 
         [NonSerialized]
-        private RenderTexture irradianceLUT = null;
-        public RenderTexture IrradianceLUT { get { return irradianceLUT; } }
+        private RenderTexture m_irradianceLUT = null;
+        public RenderTexture IrradianceLUT { get { return m_irradianceLUT; } }
 
         // Shgader and material used for precompute
         [SerializeField]
-        [HideInInspector]
-        public Shader PrecomputeShader = null;
+        private Shader m_PrecomputeShader = null;
+        public Shader PrecomputeShader { get { return m_PrecomputeShader; } set { m_PrecomputeShader = value; } }
+
         [NonSerialized]
-        private Material PrecomputeMaterial = null;
+        private Material m_precomputeMaterial = null;
 
         private float Interpolate(List<float> wavelengths, List<float> wavelength_function, float wavelength)
         {
@@ -315,52 +313,52 @@ namespace PhysicalSky
         private Vector4 ScaleToWavelengths(List<float> v, float scale)
         {
             return new Vector4(
-                (float)(Interpolate(wavelengths, v, kLambdaR) * scale),
-                (float)(Interpolate(wavelengths, v, kLambdaG) * scale),
-                (float)(Interpolate(wavelengths, v, kLambdaB) * scale),
+                (float)(Interpolate(m_wavelengths, v, LAMBDA_R) * scale),
+                (float)(Interpolate(m_wavelengths, v, LAMBDA_G) * scale),
+                (float)(Interpolate(m_wavelengths, v, LAMBDA_B) * scale),
                 1.0f);
         }
 
         private void AllocateLookupTextures()
         {
-            if (!transmittanceLUT)
-                transmittanceLUT = new RenderTexture(TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
-            if (!transmittanceLUT.IsCreated())
+            if (!m_transmittanceLUT)
+                m_transmittanceLUT = new RenderTexture(TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
+            if (!m_transmittanceLUT.IsCreated())
             {
-                transmittanceLUT.useMipMap = false;
-                transmittanceLUT.Create();
+                m_transmittanceLUT.useMipMap = false;
+                m_transmittanceLUT.Create();
             }
 
-            if (!scatteringLUT)
-                scatteringLUT = new RenderTexture(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
-            if (!scatteringLUT.IsCreated())
+            if (!m_scatteringLUT)
+                m_scatteringLUT = new RenderTexture(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
+            if (!m_scatteringLUT.IsCreated())
             {
-                scatteringLUT.volumeDepth = SCATTERING_TEXTURE_DEPTH;
-                scatteringLUT.useMipMap = false;
-                scatteringLUT.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
-                scatteringLUT.enableRandomWrite = true;
-                scatteringLUT.Create();
+                m_scatteringLUT.volumeDepth = SCATTERING_TEXTURE_DEPTH;
+                m_scatteringLUT.useMipMap = false;
+                m_scatteringLUT.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
+                m_scatteringLUT.enableRandomWrite = true;
+                m_scatteringLUT.Create();
             }
 
-            if (!irradianceLUT)
-                irradianceLUT = new RenderTexture(IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
-            if (!irradianceLUT.IsCreated())
+            if (!m_irradianceLUT)
+                m_irradianceLUT = new RenderTexture(IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
+            if (!m_irradianceLUT.IsCreated())
             {
-                irradianceLUT.useMipMap = false;
-                irradianceLUT.Create();
+                m_irradianceLUT.useMipMap = false;
+                m_irradianceLUT.Create();
             }
         }
 
         private void ReleaseLookupTextures()
         {
-            if (transmittanceLUT && transmittanceLUT.IsCreated())
-                transmittanceLUT.Release();
+            if (m_transmittanceLUT && m_transmittanceLUT.IsCreated())
+                m_transmittanceLUT.Release();
 
-            if (scatteringLUT && scatteringLUT.IsCreated())
-                scatteringLUT.Release();
+            if (m_scatteringLUT && m_scatteringLUT.IsCreated())
+                m_scatteringLUT.Release();
 
-            if (irradianceLUT && irradianceLUT.IsCreated())
-                irradianceLUT.Release();
+            if (m_irradianceLUT && m_irradianceLUT.IsCreated())
+                m_irradianceLUT.Release();
         }
 
         private void Blit(RenderTexture dest, Material mat, int pass)
@@ -377,20 +375,20 @@ namespace PhysicalSky
 
         public void SetShaderUniforms(Material m)
         {
-            m.SetVector("_solar_irradiance", ScaleToWavelengths(solar_irradiance, 1.0f));
-            m.SetFloat("_sun_angular_radius", sunAngularRadius);
-            m.SetFloat("_bottom_radius", planetaryRadius / kLengthUnitInMeters);
-            m.SetFloat("_top_radius", (planetaryRadius + atmosphereThickness) / kLengthUnitInMeters);
-            m.SetFloat("_rayleigh_scale_height", rayleighScaleHeight / kLengthUnitInMeters);
-            m.SetVector("_rayleigh_scattering", ScaleToWavelengths(rayleigh_scattering, kLengthUnitInMeters));
-            m.SetFloat("_mie_scale_height", mieScaleHeight / kLengthUnitInMeters);
-            m.SetVector("_mie_scattering", ScaleToWavelengths(mie_scattering, kLengthUnitInMeters));
-            m.SetVector("_mie_extinction", ScaleToWavelengths(mie_extinction, kLengthUnitInMeters));
-            m.SetFloat("_mie_phase_function_g", miePhaseFunctionG);
-            m.SetVector("_ground_albedo", ScaleToWavelengths(ground_albedo, 1.0f));
-            m.SetFloat("_mu_s_min", Mathf.Cos(maxSunZenithAngle));
-            m.SetVector("sun_radiance", new Vector3(kSolarIrradiance[0], kSolarIrradiance[1], kSolarIrradiance[2]) / kSunSolidAngle);
-            m.SetVector("sun_size", new Vector3(Mathf.Tan(sunAngularRadius), Mathf.Cos(sunAngularRadius), sunAngularRadius));
+            m.SetVector("_solar_irradiance", ScaleToWavelengths(m_solarIrradiance, 1.0f));
+            m.SetFloat("_sun_angular_radius", m_sunAngularRadius);
+            m.SetFloat("_bottom_radius", m_planetaryRadius / LENGTH_UNIT_IN_METERS);
+            m.SetFloat("_top_radius", (m_planetaryRadius + m_atmosphereThickness) / LENGTH_UNIT_IN_METERS);
+            m.SetFloat("_rayleigh_scale_height", m_rayleighScaleHeight / LENGTH_UNIT_IN_METERS);
+            m.SetVector("_rayleigh_scattering", ScaleToWavelengths(m_rayleighScattering, LENGTH_UNIT_IN_METERS));
+            m.SetFloat("_mie_scale_height", m_mieScaleHeight / LENGTH_UNIT_IN_METERS);
+            m.SetVector("_mie_scattering", ScaleToWavelengths(m_mieScattering, LENGTH_UNIT_IN_METERS));
+            m.SetVector("_mie_extinction", ScaleToWavelengths(m_mieExtinction, LENGTH_UNIT_IN_METERS));
+            m.SetFloat("_mie_phase_function_g", m_miePhaseFunctionG);
+            m.SetVector("_ground_albedo", new Vector3(m_groundAlbedo, m_groundAlbedo, m_groundAlbedo));
+            m.SetFloat("_mu_s_min", Mathf.Cos(m_maxSunZenithAngle));
+            m.SetVector("sun_radiance", new Vector3(SOLOAR_IRRADIANCE[0], SOLOAR_IRRADIANCE[1], SOLOAR_IRRADIANCE[2]) / m_sunSolidAngle);
+            m.SetVector("sun_size", new Vector3(Mathf.Tan(m_sunAngularRadius), Mathf.Cos(m_sunAngularRadius), m_sunAngularRadius));
         }
 
         public void Compute()
@@ -406,36 +404,34 @@ namespace PhysicalSky
                 return;
             }
 
-            wavelengths.Clear();
-            solar_irradiance.Clear();
-            rayleigh_scattering.Clear();
-            mie_scattering.Clear();
-            mie_extinction.Clear();
-            ground_albedo.Clear();
+            m_wavelengths.Clear();
+            m_solarIrradiance.Clear();
+            m_rayleighScattering.Clear();
+            m_mieScattering.Clear();
+            m_mieExtinction.Clear();
 
-            kSunSolidAngle = Mathf.PI * sunAngularRadius * sunAngularRadius;
+            m_sunSolidAngle = Mathf.PI * m_sunAngularRadius * m_sunAngularRadius;
 
-            for (int l = kLambdaMin; l <= kLambdaMax; l += 10)
+            for (int l = LAMBDA_MIN; l <= LAMBDA_MAX; l += 10)
             {
                 float lambda = l * 1e-3f;  // micro-meters
-                float mie = mieAngstromBeta / mieScaleHeight * Mathf.Pow(lambda, -mieAngstromAlpha);
-                wavelengths.Add(l);
+                float mie = m_mieAngstromBeta / m_mieScaleHeight * Mathf.Pow(lambda, -m_mieAngstromAlpha);
+                m_wavelengths.Add(l);
 
-                if (use_constant_solar_spectrum_)
-                    solar_irradiance.Add(constantSolarIrradiance);
+                if (USE_CONSTANT_SOLAR_SPECTRUM)
+                    m_solarIrradiance.Add(m_constantSolarIrradiance);
                 else
-                    solar_irradiance.Add(kSolarIrradiance[(l - kLambdaMin) / 10]);
+                    m_solarIrradiance.Add(SOLOAR_IRRADIANCE[(l - LAMBDA_MIN) / 10]);
 
-                rayleigh_scattering.Add(rayleigh * Mathf.Pow(lambda, -4));
-                mie_scattering.Add(mie * mieSingleScatteringAlbedo);
-                mie_extinction.Add(mie);
-                ground_albedo.Add(groundAlbedo);
+                m_rayleighScattering.Add(m_rayleigh * Mathf.Pow(lambda, -4));
+                m_mieScattering.Add(mie * m_mieSingleScatteringAlbedo);
+                m_mieExtinction.Add(mie);
             }
 
-            if (!PrecomputeMaterial)
-                PrecomputeMaterial = new Material(PrecomputeShader);
+            if (!m_precomputeMaterial)
+                m_precomputeMaterial = new Material(PrecomputeShader);
 
-            SetShaderUniforms(PrecomputeMaterial);
+            SetShaderUniforms(m_precomputeMaterial);
 
             RenderTexture DeltaIrradianceTexture = new RenderTexture(IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
             DeltaIrradianceTexture.useMipMap = false;
@@ -469,49 +465,49 @@ namespace PhysicalSky
             AllocateLookupTextures();
 
             // Compute Transmittance LUT
-            Blit(transmittanceLUT, PrecomputeMaterial, (int)PrecomputePass.Transmittance);
-            PrecomputeMaterial.SetTexture("transmittance_texture", transmittanceLUT); // Set for subsequent shaders to read
+            Blit(m_transmittanceLUT, m_precomputeMaterial, (int)PrecomputePass.Transmittance);
+            m_precomputeMaterial.SetTexture("transmittance_texture", m_transmittanceLUT); // Set for subsequent shaders to read
 
             // Compute Direct Irradiance into DeltaIrradianceTexture and Initialize irradianceLUT with 0
             Graphics.ClearRandomWriteTargets();
             Graphics.SetRandomWriteTarget(1, DeltaIrradianceTexture);
-            Blit(irradianceLUT, PrecomputeMaterial, (int)PrecomputePass.DirectIrradiance);
+            Blit(m_irradianceLUT, m_precomputeMaterial, (int)PrecomputePass.DirectIrradiance);
 
             // Compute Raylie and Mie Single Scattering and store them in DeltaRayleighScatteringTexture, DeltaMieScatteringTexture as well as scatteringLUT
             Graphics.ClearRandomWriteTargets();
             Graphics.SetRandomWriteTarget(1, DeltaRayleighScatteringTexture);
             Graphics.SetRandomWriteTarget(2, DeltaMieScatteringTexture);
-            Graphics.SetRandomWriteTarget(3, scatteringLUT);
-            PrecomputeMaterial.SetTexture("transmittance_texture", transmittanceLUT);
-            BlitWithDummy(PrecomputeMaterial, (int)PrecomputePass.SingleScattering, SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT);
+            Graphics.SetRandomWriteTarget(3, m_scatteringLUT);
+            m_precomputeMaterial.SetTexture("transmittance_texture", m_transmittanceLUT);
+            BlitWithDummy(m_precomputeMaterial, (int)PrecomputePass.SingleScattering, SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT);
 
             //Compute to the nth order of scattering, in sequence
             for (int scatteringOrder = 2; scatteringOrder <= NUM_SCATTERING_ORDERS; ++scatteringOrder)
             {
-                PrecomputeMaterial.SetTexture("transmittance_texture", transmittanceLUT);
-                PrecomputeMaterial.SetTexture("single_rayleigh_scattering_texture", DeltaRayleighScatteringTexture);
-                PrecomputeMaterial.SetTexture("single_mie_scattering_texture", DeltaMieScatteringTexture);
-                PrecomputeMaterial.SetTexture("multiple_scattering_texture", DeltaMultipleScatteringTexture);
-                PrecomputeMaterial.SetTexture("irradiance_texture", DeltaIrradianceTexture);
-                PrecomputeMaterial.SetInt("scattering_order", scatteringOrder);
+                m_precomputeMaterial.SetTexture("transmittance_texture", m_transmittanceLUT);
+                m_precomputeMaterial.SetTexture("single_rayleigh_scattering_texture", DeltaRayleighScatteringTexture);
+                m_precomputeMaterial.SetTexture("single_mie_scattering_texture", DeltaMieScatteringTexture);
+                m_precomputeMaterial.SetTexture("multiple_scattering_texture", DeltaMultipleScatteringTexture);
+                m_precomputeMaterial.SetTexture("irradiance_texture", DeltaIrradianceTexture);
+                m_precomputeMaterial.SetInt("scattering_order", scatteringOrder);
 
                 // Compute the scattering density, and store it in DeltaScatteringDensityTexture.
                 Graphics.ClearRandomWriteTargets();
                 Graphics.SetRandomWriteTarget(1, DeltaScatteringDensityTexture);
-                BlitWithDummy(PrecomputeMaterial, (int)PrecomputePass.ScatteringDensity, SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT);
+                BlitWithDummy(m_precomputeMaterial, (int)PrecomputePass.ScatteringDensity, SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT);
 
                 // Compute the indirect irradiance, store it in DeltaIrradianceTexture and accumulate it in irradianceLUT.
                 Graphics.ClearRandomWriteTargets();
                 Graphics.SetRandomWriteTarget(1, DeltaIrradianceTexture);
-                Graphics.SetRandomWriteTarget(2, irradianceLUT);
-                BlitWithDummy(PrecomputeMaterial, (int)PrecomputePass.IndirectIrradiance, IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT);
+                Graphics.SetRandomWriteTarget(2, m_irradianceLUT);
+                BlitWithDummy(m_precomputeMaterial, (int)PrecomputePass.IndirectIrradiance, IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT);
 
                 // Compute the multiple scattering, store it in DeltaMultipleScatteringTexture, and accumulate it in scatteringLUT.
                 Graphics.ClearRandomWriteTargets();
                 Graphics.SetRandomWriteTarget(1, DeltaMultipleScatteringTexture);
-                Graphics.SetRandomWriteTarget(2, scatteringLUT);
-                PrecomputeMaterial.SetTexture("scattering_density_texture", DeltaScatteringDensityTexture);
-                BlitWithDummy(PrecomputeMaterial, (int)PrecomputePass.MultipleScattering, SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT);
+                Graphics.SetRandomWriteTarget(2, m_scatteringLUT);
+                m_precomputeMaterial.SetTexture("scattering_density_texture", DeltaScatteringDensityTexture);
+                BlitWithDummy(m_precomputeMaterial, (int)PrecomputePass.MultipleScattering, SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT);
             }
 
             Graphics.ClearRandomWriteTargets();
@@ -527,7 +523,7 @@ namespace PhysicalSky
 #if PHYSICAL_SKY_DEBUG
             Debug.Log("Computed atmospheric lookup textures in " + (timerEndCompute - timerStartCompute) * 1000.0f + "ms");
 #endif
-            needsRecompute = false;
+            m_needsRecompute = false;
         }
 
         public void ReleaseResources()
@@ -536,17 +532,17 @@ namespace PhysicalSky
             Debug.Log("Released Atmosphere Resources");
 #endif
             ReleaseLookupTextures();
-            needsRecompute = true;
+            m_needsRecompute = true;
         }
 
         public bool TexturesInvalid()
         {
-            if (!transmittanceLUT || !transmittanceLUT.IsCreated())
+            if (!m_transmittanceLUT || !m_transmittanceLUT.IsCreated())
                 return true;
-            else if (!scatteringLUT || !scatteringLUT.IsCreated())
+            else if (!m_scatteringLUT || !m_scatteringLUT.IsCreated())
                 return true;
 
-            else if (!irradianceLUT || !irradianceLUT.IsCreated())
+            else if (!m_irradianceLUT || !m_irradianceLUT.IsCreated())
                 return true;
             else
                 return false;
@@ -554,7 +550,7 @@ namespace PhysicalSky
 
         private void Awake()
         {
-            needsRecompute = true;
+            m_needsRecompute = true;
         }
 
         private void OnDestroy()

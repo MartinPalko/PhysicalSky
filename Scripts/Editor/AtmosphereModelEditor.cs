@@ -33,6 +33,7 @@ namespace PhysicalSky
                 atmosphereModel.MiePhaseFunctionG = Mathf.Max(0.0f, EditorGUILayout.FloatField("MiePhaseFunctionG", atmosphereModel.MiePhaseFunctionG));
                 atmosphereModel.GroundAlbedo = Mathf.Max(0.0f, EditorGUILayout.FloatField("GroundAlbedo", atmosphereModel.GroundAlbedo));
                 atmosphereModel.MaxSunZenithAngle = Mathf.Max(0.0f, EditorGUILayout.FloatField("MaxSunZenithAngle", atmosphereModel.MaxSunZenithAngle));
+                atmosphereModel.PrecomputeShader = EditorGUILayout.ObjectField("Precompute Shader", atmosphereModel.PrecomputeShader as Shader, typeof(Shader), false) as Shader;
             }
 
             EditorUtility.SetDirty(atmosphereModel);

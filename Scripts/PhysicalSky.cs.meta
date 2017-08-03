@@ -1,15 +1,16 @@
 fileFormatVersion: 2
 guid: b56b70524e0d2f94d84fd4be2c31105b
-timeCreated: 1491963918
+timeCreated: 1501722132
 licenseType: Free
 MonoImporter:
   serializedVersion: 2
   defaultReferences:
-  - atmosphere: {instanceID: 0}
-  - starMap: {instanceID: 0}
-  - skyShader: {fileID: 4800000, guid: cd17161c79d920045bbbd9f7c5df52aa, type: 3}
-  - sunRadianceShader: {fileID: 4800000, guid: 19d7a9db099b2504a94dc22631c54094, type: 3}
-  - starMeshShader: {fileID: 4800000, guid: ab12a6dd16ac5444e8dc5a89c70698ee, type: 3}
+  - m_Atmosphere: {instanceID: 0}
+  - m_StarMap: {instanceID: 0}
+  - m_SkyShader: {fileID: 4800000, guid: cd17161c79d920045bbbd9f7c5df52aa, type: 3}
+  - m_SunRadianceShader: {fileID: 4800000, guid: 19d7a9db099b2504a94dc22631c54094,
+      type: 3}
+  - m_StarMeshShader: {fileID: 4800000, guid: ab12a6dd16ac5444e8dc5a89c70698ee, type: 3}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 
