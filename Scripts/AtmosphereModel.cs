@@ -345,6 +345,7 @@ namespace PhysicalSky
             if (!m_irradianceLUT.IsCreated())
             {
                 m_irradianceLUT.useMipMap = false;
+                m_irradianceLUT.enableRandomWrite = true;
                 m_irradianceLUT.Create();
             }
         }
