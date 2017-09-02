@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using UnityEditor;
-using System.IO;
 using System.Collections.Generic;
+using System.IO;
 
 namespace PhysicalSky
 {
@@ -57,7 +57,7 @@ namespace PhysicalSky
             csvPath = EditorGUILayout.TextField("Path:", csvPath);
             if (GUILayout.Button("...", GUILayout.Width(30)))
             {
-                csvPath = EditorUtility.OpenFilePanelWithFilters("Import star database", Application.dataPath, new string[]{ "Comma seperated values", "csv" });
+                csvPath = EditorUtility.OpenFilePanelWithFilters("Import star database", Application.dataPath, new string[] { "Comma seperated values", "csv" });
             }
             GUILayout.EndHorizontal();
             numberToImport = EditorGUILayout.IntField("Number to Import:", numberToImport);
@@ -99,7 +99,7 @@ namespace PhysicalSky
 
                         newStar.coordinate = new CelestialCoordinates.CartesianCoords(parsedX, zUp ? parsedZ : parsedY, zUp ? parsedY : parsedZ);
                     }
-                    catch(System.FormatException e)
+                    catch (System.FormatException e)
                     {
                         Debug.LogWarning("Error parsing star position: " + e.Message);
                         continue;
@@ -124,7 +124,7 @@ namespace PhysicalSky
                         Debug.LogWarning("Error parsing star color index value \'" + splitLine[headerInfo.iMag] + "\': " + e.Message);
                         continue;
                     }
-                    
+
                     stars.Add(newStar);
                 }
                 else
@@ -140,37 +140,6 @@ namespace PhysicalSky
 
             starMap.Clear();
             starMap.Add(stars);
-        }
-    }
-
-    [CustomEditor(typeof(StarMap))]
-    public class StarMapEditor : Editor
-    {
-        // Toggles are declared static, so they don't keep collapsing between entering/exiting the editor.
-        static bool advancedUnfolded = false;
-
-        public override void OnInspectorGUI()
-        {
-            StarMap starMap = serializedObject.targetObject as StarMap;
-
-            if (!starMap)
-                return;
-
-            EditorGUILayout.LabelField("Star map containing " + starMap.Count() + " stars.");
-
-            if (GUILayout.Button("Import from .csv"))
-            {
-                StarMapImporter mapImporter = EditorWindow.GetWindow<StarMapImporter>(true, "Import star map from CSV");
-                mapImporter.starMap = starMap;
-                mapImporter.ShowUtility();                
-            }
-
-            starMap.FirstIsSun = EditorGUILayout.Toggle("Brightest Star is Sun", starMap.FirstIsSun);
-            starMap.BackgroundCube = EditorGUILayout.ObjectField("Background Cubemap", starMap.BackgroundCube, typeof(Cubemap), false) as Cubemap;
-            starMap.BackgroundRotation = EditorGUILayout.Vector3Field("Cubemap Rotation", starMap.BackgroundRotation);
-            starMap.BackgroundCubeBrightness = EditorGUILayout.FloatField("Cubemap Brightness", starMap.BackgroundCubeBrightness);
-
-            EditorUtility.SetDirty(starMap);
         }
     }
 }
