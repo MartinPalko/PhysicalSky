@@ -16,7 +16,7 @@ namespace PhysicalSky
             IndirectIrradiance = 4,
             MultipleScattering = 5
         }
-        
+
         private bool m_needsRecompute = true;
         public bool NeedsRecompute { get { return m_needsRecompute || TexturesInvalid(); } }
 
@@ -557,5 +557,28 @@ namespace PhysicalSky
         {
             ReleaseResources();
         }
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// Invoked by Unity whenever our values change in the inspector. Only
+        /// called in the Editor
+        /// </summary>
+        protected void OnValidate()
+        {
+            ConstantSolarIrradiance = Mathf.Max(0.001f, ConstantSolarIrradiance);
+            SunAngularRadius = Mathf.Max(0.001f, SunAngularRadius);
+            PlanetaryRadius = Mathf.Max(1.0f, PlanetaryRadius);
+            AtmosphereThickness = Mathf.Max(1.0f, AtmosphereThickness);
+            Rayleigh = Mathf.Max(1.0e-22f, Rayleigh);
+            RayleighScaleHeight = Mathf.Max(0.0f, RayleighScaleHeight);
+            MieScaleHeight = Mathf.Max(0.0f, MieScaleHeight);
+            MieAngstromAlpha = Mathf.Max(0.0f, MieAngstromAlpha);
+            MieAngstromBeta = Mathf.Max(0.0f, MieAngstromBeta);
+            MieSingleScatteringAlbedo = Mathf.Max(0.0f, MieSingleScatteringAlbedo);
+            MiePhaseFunctionG = Mathf.Max(0.0f, MiePhaseFunctionG);
+            GroundAlbedo = Mathf.Max(0.0f, GroundAlbedo);
+            MaxSunZenithAngle = Mathf.Max(0.0f, MaxSunZenithAngle);
+        }
+#endif
     }
 }
