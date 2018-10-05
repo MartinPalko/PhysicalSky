@@ -55,8 +55,6 @@
 * THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#define COMBINED_SCATTERING_TEXTURES
-
 #define TRANSMITTANCE_TEXTURE_WIDTH 256
 #define TRANSMITTANCE_TEXTURE_HEIGHT 64
 #define SCATTERING_TEXTURE_R_SIZE 32
@@ -184,6 +182,19 @@ struct AtmosphereParameters
 	// Earth case, 102 degrees is a good choice - yielding mu_s_min = -0.2).
 	Number mu_s_min;
 };
+
+float4 scatteringTextureSample(sampler3D s, float4 uvwz)
+{
+	float tex_coord_x = uvwz.x * Number(SCATTERING_TEXTURE_NU_SIZE - 1);
+	float tex_x = floor(tex_coord_x);
+	float l = tex_coord_x - tex_x;
+	float3 uvw0 = float3((tex_x + uvwz.y) / Number(SCATTERING_TEXTURE_NU_SIZE),
+		uvwz.z, uvwz.w);
+	float3 uvw1 = float3((tex_x + 1.0 + uvwz.y) / Number(SCATTERING_TEXTURE_NU_SIZE),
+		uvwz.z, uvwz.w);
+
+	return lerp(tex3Dlod(s, float4(uvw0, 0)), tex3Dlod(s, float4(uvw1, 0)), l);
+}
 
 Number ClampCosine(Number mu)
 {
@@ -506,11 +517,6 @@ void GetRMuMuSNuFromScatteringTextureUvwz(in AtmosphereParameters atmosphere,
 	in float4 uvwz, out Length r, out Number mu, out Number mu_s,
 	out Number nu, out bool ray_r_mu_intersects_ground)
 {
-	//assert(uvwz.x >= 0.0 && uvwz.x <= 1.0);
-	//assert(uvwz.y >= 0.0 && uvwz.y <= 1.0);
-	//assert(uvwz.z >= 0.0 && uvwz.z <= 1.0);
-	//assert(uvwz.w >= 0.0 && uvwz.w <= 1.0);
-
 	// Distance to top atmosphere boundary for a horizontal ray at ground level.
 	Length H = sqrt(atmosphere.top_radius * atmosphere.top_radius -	atmosphere.bottom_radius * atmosphere.bottom_radius);
 	// Distance to the horizon.
@@ -560,7 +566,7 @@ void GetRMuMuSNuFromScatteringTextureUvwz(in AtmosphereParameters atmosphere,
 }
 
 void GetRMuMuSNuFromScatteringTextureFragCoord(
-	in AtmosphereParameters atmosphere, in float3 gl_frag_coord,
+	in AtmosphereParameters atmosphere, in float3 frag_coord,
 	out Length r, out Number mu, out Number mu_s, out Number nu,
 	out bool ray_r_mu_intersects_ground)
 {
@@ -570,11 +576,11 @@ void GetRMuMuSNuFromScatteringTextureFragCoord(
 		SCATTERING_TEXTURE_MU_SIZE,
 		SCATTERING_TEXTURE_R_SIZE);
 	Number frag_coord_nu =
-		floor(gl_frag_coord.x / Number(SCATTERING_TEXTURE_MU_S_SIZE));
+		floor(frag_coord.x / Number(SCATTERING_TEXTURE_MU_S_SIZE));
 	Number frag_coord_mu_s =
-		fmod(gl_frag_coord.x, Number(SCATTERING_TEXTURE_MU_S_SIZE));
+		fmod(frag_coord.x, Number(SCATTERING_TEXTURE_MU_S_SIZE));
 	float4 uvwz = 
-		float4(frag_coord_nu, frag_coord_mu_s, gl_frag_coord.y, gl_frag_coord.z) /
+		float4(frag_coord_nu, frag_coord_mu_s, frag_coord.y, frag_coord.z) /
 		SCATTERING_TEXTURE_SIZE;
 	GetRMuMuSNuFromScatteringTextureUvwz(
 		atmosphere, uvwz, r, mu, mu_s, nu, ray_r_mu_intersects_ground);
@@ -606,15 +612,8 @@ AbstractSpectrum GetScattering(
 {
 	float4 uvwz = GetScatteringTextureUvwzFromRMuMuSNu(
 		atmosphere, r, mu, mu_s, nu, ray_r_mu_intersects_ground);
-	Number tex_coord_x = uvwz.x * Number(SCATTERING_TEXTURE_NU_SIZE - 1);
-	Number tex_x = floor(tex_coord_x);
-	Number lerp = tex_coord_x - tex_x;
-	float3 uvw0 = float3((tex_x + uvwz.y) / Number(SCATTERING_TEXTURE_NU_SIZE),
-		uvwz.z, uvwz.w);
-	float3 uvw1 = float3((tex_x + 1.0 + uvwz.y) / Number(SCATTERING_TEXTURE_NU_SIZE),
-		uvwz.z, uvwz.w);
-	return AbstractSpectrum(tex3Dlod(scattering_texture, float4(uvw0, 0)).rgb * (1.0 - lerp) +
-		tex3Dlod(scattering_texture, float4(uvw1, 0)).rgb * lerp);
+
+	return AbstractSpectrum(scatteringTextureSample(scattering_texture, uvwz).rgb);
 }
 
 RadianceSpectrum GetScattering(
@@ -812,6 +811,7 @@ RadianceDensitySpectrum ComputeScatteringDensityTexture(
 	in IrradianceTexture irradiance_texture,
 	in float3 gl_frag_coord, int scattering_order) 
 {
+
 	Length r;
 	Number mu;
 	Number mu_s;
@@ -952,7 +952,6 @@ IrradianceSpectrum GetIrradiance(
 	return IrradianceSpectrum(tex2Dlod(irradiance_texture, float4(uv, 0, 0)).rgb);
 }
 
-#ifdef COMBINED_SCATTERING_TEXTURES
 float3 GetExtrapolatedSingleMieScattering(
 	in AtmosphereParameters atmosphere, in float4 scattering)
 {
@@ -962,7 +961,6 @@ float3 GetExtrapolatedSingleMieScattering(
 	}
 	return scattering.rgb * scattering.a / scattering.r * (atmosphere.rayleigh_scattering.r / atmosphere.mie_scattering.r) * (atmosphere.mie_scattering / atmosphere.rayleigh_scattering);
 }
-#endif
 
 IrradianceSpectrum GetCombinedScattering(
 	in AtmosphereParameters atmosphere,
@@ -973,21 +971,12 @@ IrradianceSpectrum GetCombinedScattering(
 	out IrradianceSpectrum single_mie_scattering) 
 {
 	float4 uvwz = GetScatteringTextureUvwzFromRMuMuSNu(atmosphere, r, mu, mu_s, nu, ray_r_mu_intersects_ground);
-	Number tex_coord_x = uvwz.x * Number(SCATTERING_TEXTURE_NU_SIZE - 1);
-	Number tex_x = floor(tex_coord_x);
-	Number lerp = tex_coord_x - tex_x;
-	float3 uvw0 = float3((tex_x + uvwz.y) / Number(SCATTERING_TEXTURE_NU_SIZE),	uvwz.z, uvwz.w);
-	float3 uvw1 = float3((tex_x + 1.0 + uvwz.y) / Number(SCATTERING_TEXTURE_NU_SIZE), uvwz.z, uvwz.w);
-#ifdef COMBINED_SCATTERING_TEXTURES
-	float4 combined_scattering = tex3Dlod(scattering_texture, float4(uvw0, 0)) * (1.0 - lerp) + tex3Dlod(scattering_texture, float4(uvw1, 0)) * lerp;
+
+	float4 combined_scattering = scatteringTextureSample(scattering_texture, uvwz);
+
 	IrradianceSpectrum scattering = IrradianceSpectrum(combined_scattering.rgb);
 	single_mie_scattering = GetExtrapolatedSingleMieScattering(atmosphere, combined_scattering);
-#else
-	IrradianceSpectrum scattering = IrradianceSpectrum(
-		tex3Dlod(scattering_texture, float4(uvw0, 0)).rgb * (1.0 - lerp) + tex3Dlod(scattering_texture, float4(uvw1, 0)).rgb * lerp);
-	single_mie_scattering = IrradianceSpectrum(
-		tex3Dlod(single_mie_scattering_texture, float4(uvw0, 0)).rgb * (1.0 - lerp) + tex3Dlod(single_mie_scattering_texture, float4(uvw1, 0)).rgb * lerp);
-#endif
+
 	return scattering;
 }
 
@@ -1128,10 +1117,9 @@ RadianceSpectrum GetSkyRadianceToPoint(
 	scattering = scattering - shadow_transmittance * scattering_p;
 	single_mie_scattering =
 		single_mie_scattering - shadow_transmittance * single_mie_scattering_p;
-#ifdef COMBINED_SCATTERING_TEXTURES
+
 	single_mie_scattering = GetExtrapolatedSingleMieScattering(
 		atmosphere, float4(scattering, single_mie_scattering.r));
-#endif
 
 	// Hack to avoid rendering artifacts when the sun is below the horizon.
 	single_mie_scattering = single_mie_scattering *

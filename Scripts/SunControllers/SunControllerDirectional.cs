@@ -12,7 +12,8 @@ namespace PhysicalSky
 
         protected void Update()
         {
-            sky.SunDirection = CartesianCoords.SphericalToCartesian(sunAzimuth * (Mathf.PI / 180.0f), sunAltitude * (Mathf.PI / 180.0f));
+            if (sky != null)
+                sky.SunDirection = CartesianCoords.SphericalToCartesian(sunAzimuth * (Mathf.PI / 180.0f), sunAltitude * (Mathf.PI / 180.0f));
         }
     }
 }
