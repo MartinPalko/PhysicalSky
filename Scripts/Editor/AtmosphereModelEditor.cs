@@ -15,6 +15,7 @@ public class AtmosphereModelEditor : Editor
 
     // Properties
     protected SerializedProperty m_Script;
+    protected SerializedProperty m_useOzone;
     protected SerializedProperty m_constantSolarIrradiance;
     protected SerializedProperty m_sunAngularRadius;
     protected SerializedProperty m_planetaryRadius;
@@ -43,6 +44,7 @@ public class AtmosphereModelEditor : Editor
     protected virtual void OnEnable()
     {
         m_Script = serializedObject.FindProperty("m_Script");
+        m_useOzone = serializedObject.FindProperty("m_useOzone");
         m_constantSolarIrradiance = serializedObject.FindProperty("m_constantSolarIrradiance");
         m_sunAngularRadius = serializedObject.FindProperty("m_sunAngularRadius");
         m_planetaryRadius = serializedObject.FindProperty("m_planetaryRadius");
@@ -82,6 +84,7 @@ public class AtmosphereModelEditor : Editor
             if (EditorGUILayout.BeginFadeGroup(m_IsShowingAdvancedRegion.faded))
             {
                 EditorGUI.indentLevel++;
+                EditorGUILayout.PropertyField(property: m_useOzone);
                 EditorGUILayout.PropertyField(property: m_constantSolarIrradiance);
                 EditorGUILayout.PropertyField(property: m_sunAngularRadius);
                 EditorGUILayout.PropertyField(property: m_planetaryRadius);
@@ -103,6 +106,10 @@ public class AtmosphereModelEditor : Editor
         if (EditorGUI.EndChangeCheck())
         {
             serializedObject.ApplyModifiedProperties();
+
+            PhysicalSky.AtmosphereModel model = serializedObject.targetObject as PhysicalSky.AtmosphereModel;
+            if (model != null)
+                model.Compute();
         }
 
         m_IsShowingAdvancedRegion.target = isAdvancedModeExpanded;

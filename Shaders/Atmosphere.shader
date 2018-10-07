@@ -26,7 +26,6 @@
 
 			uniform float3 camera;
 			uniform float3 sun_direction;
-			uniform float3 sun_radiance;
 			uniform float3 sun_size;
 
 			struct appdata_t
@@ -80,7 +79,7 @@
 
 				if (dot(sun_direction, view_ray) > sun_size.y)
 				{
-					radiance += transmittance * sun_radiance;
+					radiance += transmittance * GetSolarRadiance(params);
 				}
 
 				float exposure = 10;

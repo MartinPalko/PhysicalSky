@@ -22,7 +22,6 @@
 			uniform sampler2D irradiance_texture;
 
 			uniform float3 camera;
-			uniform float3 sun_radiance;
 			uniform float3 sun_size;
 			uniform float3 sun_direction;
 			uniform float4x4 sun_rotation_matrix;
@@ -44,7 +43,7 @@
 
 				if (dot(sun_direction, view_ray) > sun_size.y)
 				{
-					return fixed4(transmittance * sun_radiance, 1);
+					return fixed4(transmittance * GetSolarRadiance(params), 1);
 				}
 				return 0;
 				

@@ -75,6 +75,7 @@
 #define LuminousPower float
 
 #define Number float
+#define InverseLength float
 #define Area float
 #define Volume float
 #define NumberDensity float
@@ -145,35 +146,73 @@ static const LuminousIntensity kcd = 1000.0;
 static const Luminance cd_per_square_meter = 1.0;
 static const Luminance kcd_per_square_meter = 1000.0;
 
+// An atmosphere layer of width 'width', and whose density is defined as
+//   'exp_term' * exp('exp_scale' * h) + 'linear_term' * h + 'constant_term',
+// clamped to [0,1], and where h is the altitude.
+struct DensityProfileLayer
+{
+	Length width;
+	Number exp_term;
+	InverseLength exp_scale;
+	InverseLength linear_term;
+	Number constant_term;
+};
+
+// An atmosphere density profile made of several layers on top of each other
+// (from bottom to top). The width of the last layer is ignored, i.e. it always
+// extend to the top atmosphere boundary. The profile values vary between 0
+// (null density) to 1 (maximum density).
+struct DensityProfile 
+{
+	DensityProfileLayer layer0;
+	DensityProfileLayer layer1;
+};
+
+//The atmosphere parameters are then defined by the following struct:
 struct AtmosphereParameters 
 {
 	// The solar irradiance at the top of the atmosphere.
 	IrradianceSpectrum solar_irradiance;
-	// The sun's angular radius.
+	// The sun's angular radius. Warning: the implementation uses approximations
+	// that are valid only if this angle is smaller than 0.1 radians.
 	Angle sun_angular_radius;
 	// The distance between the planet center and the bottom of the atmosphere.
 	Length bottom_radius;
 	// The distance between the planet center and the top of the atmosphere.
 	Length top_radius;
-	// The scale height of air molecules, meaning that their density is
-	// proportional to exp(-h / rayleigh_scale_height), with h the altitude
-	// (with the bottom of the atmosphere at altitude 0).
-	Length rayleigh_scale_height;
-	// The scattering coefficient of air molecules at the bottom of the
-	// atmosphere, as a function of wavelength.
+	// The density profile of air molecules, i.e. a function from altitude to
+	// dimensionless values between 0 (null density) and 1 (maximum density).
+	DensityProfile rayleigh_density;
+	// The scattering coefficient of air molecules at the altitude where their
+	// density is maximum (usually the bottom of the atmosphere), as a function of
+	// wavelength. The scattering coefficient at altitude h is equal to
+	// 'rayleigh_scattering' times 'rayleigh_density' at this altitude.
 	ScatteringSpectrum rayleigh_scattering;
-	// The scale height of aerosols, meaning that their density is proportional
-	// to exp(-h / mie_scale_height), with h the altitude.
-	Length mie_scale_height;
-	// The scattering coefficient of aerosols at the bottom of the atmosphere,
-	// as a function of wavelength.
+	// The density profile of aerosols, i.e. a function from altitude to
+	// dimensionless values between 0 (null density) and 1 (maximum density).
+	DensityProfile mie_density;
+	// The scattering coefficient of aerosols at the altitude where their density
+	// is maximum (usually the bottom of the atmosphere), as a function of
+	// wavelength. The scattering coefficient at altitude h is equal to
+	// 'mie_scattering' times 'mie_density' at this altitude.
 	ScatteringSpectrum mie_scattering;
-	// The extinction coefficient of aerosols at the bottom of the atmosphere,
-	// as a function of wavelength.
+	// The extinction coefficient of aerosols at the altitude where their density
+	// is maximum (usually the bottom of the atmosphere), as a function of
+	// wavelength. The extinction coefficient at altitude h is equal to
+	// 'mie_extinction' times 'mie_density' at this altitude.
 	ScatteringSpectrum mie_extinction;
 	// The asymetry parameter for the Cornette-Shanks phase function for the
 	// aerosols.
 	Number mie_phase_function_g;
+	// The density profile of air molecules that absorb light (e.g. ozone), i.e.
+	// a function from altitude to dimensionless values between 0 (null density)
+	// and 1 (maximum density).
+	DensityProfile absorption_density;
+	// The extinction coefficient of molecules that absorb light (e.g. ozone) at
+	// the altitude where their density is maximum, as a function of wavelength.
+	// The extinction coefficient at altitude h is equal to
+	// 'absorption_extinction' times 'absorption_density' at this altitude.
+	ScatteringSpectrum absorption_extinction;
 	// The average albedo of the ground.
 	DimensionlessSpectrum ground_albedo;
 	// The cosine of the maximum Sun zenith angle for which atmospheric scattering
@@ -216,6 +255,12 @@ Length SafeSqrt(Area a)
 	return sqrt(max(a, 0.0 * m2));
 }
 
+RadianceSpectrum GetSolarRadiance(AtmosphereParameters atmosphere) 
+{
+	return atmosphere.solar_irradiance /
+		(PI * atmosphere.sun_angular_radius * atmosphere.sun_angular_radius);
+}
+
 Length DistanceToTopAtmosphereBoundary(in AtmosphereParameters atmosphere,	Length r, Number mu) 
 {
 	//assert(r <= atmosphere.top_radius);
@@ -242,7 +287,21 @@ bool RayIntersectsGround(in AtmosphereParameters atmosphere, Length r, Number mu
 		atmosphere.bottom_radius * atmosphere.bottom_radius >= 0.0 * m2;
 }
 
-Length ComputeOpticalLengthToTopAtmosphereBoundary(in AtmosphereParameters atmosphere, Length scale_height,Length r, Number mu)
+Number GetLayerDensity(in DensityProfileLayer layer, Length altitude) 
+{
+	Number density = layer.exp_term * exp(layer.exp_scale * altitude) +
+		layer.linear_term * altitude + layer.constant_term;
+	return clamp(density, Number(0.0), Number(1.0));
+}
+
+Number GetProfileDensity(in DensityProfile profile, Length altitude) 
+{
+	return altitude < profile.layer0.width ?
+		GetLayerDensity(profile.layer0, altitude) :
+		GetLayerDensity(profile.layer1, altitude);
+}
+
+Length ComputeOpticalLengthToTopAtmosphereBoundary(in AtmosphereParameters atmosphere, in DensityProfile profile, Length r, Number mu)
 {
 	//assert(r >= atmosphere.bottom_radius && r <= atmosphere.top_radius);
 	//assert(mu >= -1.0 && mu <= 1.0);
@@ -259,7 +318,7 @@ Length ComputeOpticalLengthToTopAtmosphereBoundary(in AtmosphereParameters atmos
 		Length r_i = sqrt(d_i * d_i + 2.0 * r * mu * d_i + r * r);
 		// Number density at the current sample _point (divided by the number density
 		// at the bottom of the atmosphere, yielding a dimensionless number).
-		Number y_i = exp(-(r_i - atmosphere.bottom_radius) / scale_height);
+		Number y_i = GetProfileDensity(profile, r_i - atmosphere.bottom_radius);
 		// Sample weight (from the trapezoidal rule).
 		Number weight_i = i == 0 || i == SAMPLE_COUNT ? 0.5 : 1.0;
 		result += y_i * weight_i * dx;
@@ -274,18 +333,21 @@ DimensionlessSpectrum ComputeTransmittanceToTopAtmosphereBoundary(in AtmosphereP
 	return exp(-(
 		atmosphere.rayleigh_scattering *
 		ComputeOpticalLengthToTopAtmosphereBoundary(
-			atmosphere, atmosphere.rayleigh_scale_height, r, mu) +
+			atmosphere, atmosphere.rayleigh_density, r, mu) +
 		atmosphere.mie_extinction *
 		ComputeOpticalLengthToTopAtmosphereBoundary(
-			atmosphere, atmosphere.mie_scale_height, r, mu)));
+			atmosphere, atmosphere.mie_density, r, mu) +
+      atmosphere.absorption_extinction *
+          ComputeOpticalLengthToTopAtmosphereBoundary(
+              atmosphere, atmosphere.absorption_density, r, mu)));
 }
 
-Number GetTextureCoordFromUnitRange(Number x, int texture_size) 
+Number GetTextureCoordFromUnitRange(Number x, int texture_size)
 {
 	return 0.5 / Number(texture_size) + x * (1.0 - 1.0 / Number(texture_size));
 }
 
-Number GetUnitRangeFromTextureCoord(Number u, int texture_size) 
+Number GetUnitRangeFromTextureCoord(Number u, int texture_size)
 {
 	return (u - 0.5 / Number(texture_size)) / (1.0 - 1.0 / Number(texture_size));
 }
@@ -329,13 +391,13 @@ void GetRMuFromTransmittanceTextureUv(in AtmosphereParameters atmosphere, in flo
 	mu = ClampCosine(mu);
 }
 
-DimensionlessSpectrum ComputeTransmittanceToTopAtmosphereBoundaryTexture(in AtmosphereParameters atmosphere, in float2 gl_frag_coord)
+DimensionlessSpectrum ComputeTransmittanceToTopAtmosphereBoundaryTexture(in AtmosphereParameters atmosphere, in float2 frag_coord)
 {
 	// Don't have to scale by texture size, since we now just pass in normalized values.
 	const float2 TRANSMITTANCE_TEXTURE_SIZE =	float2(TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT);
 	Length r;
 	Number mu;
-	GetRMuFromTransmittanceTextureUv(atmosphere, gl_frag_coord / TRANSMITTANCE_TEXTURE_SIZE, r, mu);
+	GetRMuFromTransmittanceTextureUv(atmosphere, frag_coord / TRANSMITTANCE_TEXTURE_SIZE, r, mu);
 	return ComputeTransmittanceToTopAtmosphereBoundary(atmosphere, r, mu);
 }
 
@@ -375,29 +437,35 @@ DimensionlessSpectrum GetTransmittance(in AtmosphereParameters atmosphere, in Tr
 	}
 }
 
+DimensionlessSpectrum GetTransmittanceToSun(
+	in AtmosphereParameters atmosphere,
+	in TransmittanceTexture transmittance_texture,
+	Length r, Number mu_s)
+{
+	Number sin_theta_h = atmosphere.bottom_radius / r;
+	Number cos_theta_h = -sqrt(max(1.0 - sin_theta_h * sin_theta_h, 0.0));
+	return GetTransmittanceToTopAtmosphereBoundary(
+		atmosphere, transmittance_texture, r, mu_s) *
+		smoothstep(-sin_theta_h * atmosphere.sun_angular_radius / rad,
+			sin_theta_h * atmosphere.sun_angular_radius / rad,
+			mu_s - cos_theta_h);
+}
+
 void ComputeSingleScatteringIntegrand(in AtmosphereParameters atmosphere, in TransmittanceTexture transmittance_texture, Length r, Number mu, Number mu_s, Number nu, Length d, bool ray_r_mu_intersects_ground, out DimensionlessSpectrum rayleigh, out DimensionlessSpectrum mie)
 {
 	Length r_d = ClampRadius(atmosphere, sqrt(d * d + 2.0 * r * mu * d + r * r));
 	Number mu_s_d = ClampCosine((r * mu_s + d * nu) / r_d);
 
-	if (RayIntersectsGround(atmosphere, r_d, mu_s_d))
-	{
-		rayleigh = DimensionlessSpectrum(0.0, 0.0, 0.0);
-		mie = DimensionlessSpectrum(0.0, 0.0, 0.0);
-	}
-	else
-	{
-		DimensionlessSpectrum transmittance =
-			GetTransmittance(
-				atmosphere, transmittance_texture, r, mu, d,
-				ray_r_mu_intersects_ground) *
-			GetTransmittanceToTopAtmosphereBoundary(
-				atmosphere, transmittance_texture, r_d, mu_s_d);
-		rayleigh = transmittance * exp(
-			-(r_d - atmosphere.bottom_radius) / atmosphere.rayleigh_scale_height);
-		mie = transmittance * exp(
-			-(r_d - atmosphere.bottom_radius) / atmosphere.mie_scale_height);
-	}
+	DimensionlessSpectrum transmittance =
+		GetTransmittance(
+			atmosphere, transmittance_texture, r, mu, d,
+			ray_r_mu_intersects_ground) *
+		GetTransmittanceToSun(
+			atmosphere, transmittance_texture, r_d, mu_s_d);
+	rayleigh = transmittance * GetProfileDensity(
+		atmosphere.rayleigh_density, r_d - atmosphere.bottom_radius);
+	mie = transmittance * GetProfileDensity(
+		atmosphere.mie_density, r_d - atmosphere.bottom_radius);
 }
 
 Length DistanceToNearestAtmosphereBoundary(in AtmosphereParameters atmosphere,	Length r, Number mu, bool ray_r_mu_intersects_ground) 
@@ -590,7 +658,7 @@ void GetRMuMuSNuFromScatteringTextureFragCoord(
 }
 
 void ComputeSingleScatteringTexture(in AtmosphereParameters atmosphere,
-	in TransmittanceTexture transmittance_texture, in float3 gl_frag_coord,
+	in TransmittanceTexture transmittance_texture, in float3 frag_coord,
 	out IrradianceSpectrum rayleigh, out IrradianceSpectrum mie)
 {
 	Length r;
@@ -598,7 +666,7 @@ void ComputeSingleScatteringTexture(in AtmosphereParameters atmosphere,
 	Number mu_s;
 	Number nu;
 	bool ray_r_mu_intersects_ground;
-	GetRMuMuSNuFromScatteringTextureFragCoord(atmosphere, gl_frag_coord,
+	GetRMuMuSNuFromScatteringTextureFragCoord(atmosphere, frag_coord,
 		r, mu, mu_s, nu, ray_r_mu_intersects_ground);
 	ComputeSingleScattering(atmosphere, transmittance_texture,
 		r, mu, mu_s, nu, ray_r_mu_intersects_ground, rayleigh, mie);
@@ -738,10 +806,10 @@ RadianceDensitySpectrum ComputeScatteringDensity(
 			// coefficient, and the phase function for directions omega and omega_i
 			// (all this summed over all particle types, i.e. Rayleigh and Mie).
 			Number nu2 = dot(omega, omega_i);
-			Number rayleigh_density = exp(
-				-(r - atmosphere.bottom_radius) / atmosphere.rayleigh_scale_height);
-			Number mie_density = exp(
-				-(r - atmosphere.bottom_radius) / atmosphere.mie_scale_height);
+			Number rayleigh_density = GetProfileDensity(
+				atmosphere.rayleigh_density, r - atmosphere.bottom_radius);
+			Number mie_density = GetProfileDensity(
+				atmosphere.mie_density, r - atmosphere.bottom_radius);
 			rayleigh_mie += incident_radiance * (
 				atmosphere.rayleigh_scattering * rayleigh_density *
 				RayleighPhaseFunction(nu2) +
@@ -809,15 +877,14 @@ RadianceDensitySpectrum ComputeScatteringDensityTexture(
 	in ReducedScatteringTexture single_mie_scattering_texture,
 	in ScatteringTexture multiple_scattering_texture,
 	in IrradianceTexture irradiance_texture,
-	in float3 gl_frag_coord, int scattering_order) 
+	in float3 frag_coord, int scattering_order) 
 {
-
 	Length r;
 	Number mu;
 	Number mu_s;
 	Number nu;
 	bool ray_r_mu_intersects_ground;
-	GetRMuMuSNuFromScatteringTextureFragCoord(atmosphere, gl_frag_coord,
+	GetRMuMuSNuFromScatteringTextureFragCoord(atmosphere, frag_coord,
 		r, mu, mu_s, nu, ray_r_mu_intersects_ground);
 	return ComputeScatteringDensity(atmosphere, transmittance_texture,
 		single_rayleigh_scattering_texture, single_mie_scattering_texture,
@@ -829,13 +896,13 @@ RadianceSpectrum ComputeMultipleScatteringTexture(
 	in AtmosphereParameters atmosphere,
 	in TransmittanceTexture transmittance_texture,
 	in ScatteringDensityTexture scattering_density_texture,
-	in float3 gl_frag_coord, out Number nu)
+	in float3 frag_coord, out Number nu)
 {
 	Length r;
 	Number mu;
 	Number mu_s;
 	bool ray_r_mu_intersects_ground;
-	GetRMuMuSNuFromScatteringTextureFragCoord(atmosphere, gl_frag_coord,
+	GetRMuMuSNuFromScatteringTextureFragCoord(atmosphere, frag_coord,
 		r, mu, mu_s, nu, ray_r_mu_intersects_ground);
 	return ComputeMultipleScattering(atmosphere, transmittance_texture,
 		scattering_density_texture, r, mu, mu_s, nu,
@@ -850,9 +917,16 @@ IrradianceSpectrum ComputeDirectIrradiance(
 	//assert(r >= atmosphere.bottom_radius && r <= atmosphere.top_radius);
 	//assert(mu_s >= -1.0 && mu_s <= 1.0);
 
+	Number alpha_s = atmosphere.sun_angular_radius / rad;
+	// Approximate average of the cosine factor mu_s over the visible fraction of
+	// the Sun disc.
+	Number average_cosine_factor =
+		mu_s < -alpha_s ? 0.0 : (mu_s > alpha_s ? mu_s :
+		(mu_s + alpha_s) * (mu_s + alpha_s) / (4.0 * alpha_s));
+
 	return atmosphere.solar_irradiance *
 		GetTransmittanceToTopAtmosphereBoundary(
-			atmosphere, transmittance_texture, r, mu_s) * max(mu_s, 0.0);
+			atmosphere, transmittance_texture, r, mu_s) * average_cosine_factor;
 }
 
 IrradianceSpectrum ComputeIndirectIrradiance(
@@ -876,8 +950,6 @@ IrradianceSpectrum ComputeIndirectIrradiance(
 	for (int j = 0; j < SAMPLE_COUNT / 2; ++j)
 	{
 		Angle theta = (Number(j) + 0.5) * dtheta;
-		bool ray_r_theta_intersects_ground =
-			RayIntersectsGround(atmosphere, r, cos(theta));
 		for (int i = 0; i < 2 * SAMPLE_COUNT; ++i) 
 		{
 			Angle phi = (Number(i) + 0.5) * dphi;
@@ -888,7 +960,7 @@ IrradianceSpectrum ComputeIndirectIrradiance(
 			Number nu = dot(omega, omega_s);
 			result += GetScattering(atmosphere, single_rayleigh_scattering_texture,
 				single_mie_scattering_texture, multiple_scattering_texture,
-				r, omega.z, mu_s, nu, ray_r_theta_intersects_ground,
+				r, omega.z, mu_s, nu, false /* ray_r_theta_intersects_ground */,
 				scattering_order) *
 				omega.z * domega;
 		}
@@ -921,11 +993,11 @@ float2(IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT);
 IrradianceSpectrum ComputeDirectIrradianceTexture(
 	in AtmosphereParameters atmosphere,
 	in TransmittanceTexture transmittance_texture,
-	in float2 gl_frag_coord) 
+	in float2 frag_coord) 
 {
 	Length r;
 	Number mu_s;
-	GetRMuSFromIrradianceTextureUv(atmosphere, gl_frag_coord / IRRADIANCE_TEXTURE_SIZE, r, mu_s);
+	GetRMuSFromIrradianceTextureUv(atmosphere, frag_coord / IRRADIANCE_TEXTURE_SIZE, r, mu_s);
 	return ComputeDirectIrradiance(atmosphere, transmittance_texture, r, mu_s);
 }
 
@@ -934,12 +1006,12 @@ IrradianceSpectrum ComputeIndirectIrradianceTexture(
 	in ReducedScatteringTexture single_rayleigh_scattering_texture,
 	in ReducedScatteringTexture single_mie_scattering_texture,
 	in ScatteringTexture multiple_scattering_texture,
-	in float2 gl_frag_coord, int scattering_order)
+	in float2 frag_coord, int scattering_order)
 {
 	Length r;
 	Number mu_s;
 	GetRMuSFromIrradianceTextureUv(
-		atmosphere, gl_frag_coord / IRRADIANCE_TEXTURE_SIZE, r, mu_s);
+		atmosphere, frag_coord / IRRADIANCE_TEXTURE_SIZE, r, mu_s);
 	return ComputeIndirectIrradiance(atmosphere, single_rayleigh_scattering_texture, single_mie_scattering_texture,	multiple_scattering_texture, r, mu_s, scattering_order);
 }
 
@@ -1002,8 +1074,7 @@ RadianceSpectrum GetSkyRadiance(
 		r = atmosphere.top_radius;
 		rmu += distance_to_top_atmosphere_boundary;
 	}
-	// If the view ray does not intersect the atmosphere, simply return 0.
-	if (r > atmosphere.top_radius) 
+	else if (r > atmosphere.top_radius)  // If the view ray does not intersect the atmosphere, simply return 0.
 	{
 		transmittance = DimensionlessSpectrum(1.0, 1.0, 1.0);
 		return RadianceSpectrum(0.0, 0.0, 0.0);
@@ -1145,7 +1216,7 @@ IrradianceSpectrum GetSunAndSkyIrradiance(
 
 	// Direct irradiance.
 	return atmosphere.solar_irradiance *
-		GetTransmittanceToTopAtmosphereBoundary(
+		GetTransmittanceToSun(
 			atmosphere, transmittance_texture, r, mu_s) *
 		smoothstep(-atmosphere.sun_angular_radius / rad,
 			atmosphere.sun_angular_radius / rad,

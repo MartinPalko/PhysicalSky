@@ -25,7 +25,6 @@
 			uniform sampler2D irradiance_texture;
 
 			uniform float3 camera;
-			uniform float3 sun_radiance;
 			uniform float3 sun_size;
 			uniform float sky_exposure;
 			uniform float sun_brightness;
@@ -81,7 +80,7 @@
 				bool reflection_capture = any(_LightColor0.xyz == half3(0, 0, 0));
 				if (!reflection_capture && dot(sun_direction, view_ray) > sun_size.y)
 				{
-					radiance += transmittance * sun_radiance;
+					radiance += transmittance * GetSolarRadiance(params);
 				}
 
 				radiance *= sun_brightness;

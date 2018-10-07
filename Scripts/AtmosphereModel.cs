@@ -7,6 +7,79 @@ namespace PhysicalSky
     [CreateAssetMenu(fileName = "NewAtmosphereModel", menuName = "PhysicalSky/AtmosphereModel")]
     public class AtmosphereModel : ScriptableObject, IAtmosphereModel
     {
+        // Matches that in PhysicalSkyCommon.cginc
+        public struct DensityProfileLayer
+        {
+            float width;
+            float exp_term;
+            float exp_scale;
+            float linear_term;
+            float constant_term;
+
+            public DensityProfileLayer(float width, float exp_term, float exp_scale, float linear_term, float constant_term)
+            {
+                this.width = width;
+                this.exp_term = exp_term;
+                this.exp_scale = exp_scale;
+                this.linear_term = linear_term;
+                this.constant_term = constant_term;
+            }
+
+            public static bool operator ==(DensityProfileLayer x, DensityProfileLayer y)
+            {
+                return x.width == y.width &&
+                    x.exp_term == y.exp_term &&
+                    x.exp_scale == y.exp_scale &&
+                    x.linear_term == y.linear_term &&
+                    x.constant_term == y.constant_term;
+            }
+            public static bool operator !=(DensityProfileLayer x, DensityProfileLayer y) { return !x.Equals(y); }
+            public override bool Equals(object obj) { return obj is DensityProfileLayer && this == (DensityProfileLayer)obj; }
+            public override int GetHashCode() { return width.GetHashCode() ^ exp_term.GetHashCode() ^ exp_scale.GetHashCode() ^ linear_term.GetHashCode() ^ constant_term.GetHashCode(); }
+
+            public void SetInMaterial(string name, Material m)
+            {
+                m.SetFloatArray(name, new float[5] {
+                    width / LENGTH_UNIT_IN_METERS,
+                    exp_term,
+                    exp_scale * LENGTH_UNIT_IN_METERS,
+                    linear_term * LENGTH_UNIT_IN_METERS,
+                    constant_term });
+            }
+        };
+
+        public struct DensityProfile
+        {
+            DensityProfileLayer layer0;
+            DensityProfileLayer layer1;
+
+            public DensityProfile(DensityProfileLayer layer0, DensityProfileLayer layer1)
+            {
+                this.layer0 = layer0;
+                this.layer1 = layer1;
+            }
+
+            public DensityProfile(DensityProfileLayer layer)
+            {
+                this.layer0 = layer;
+                this.layer1 = layer;
+            }
+
+            public static bool operator ==(DensityProfile x, DensityProfile y)
+            {
+                return x.layer0 == y.layer0 && x.layer1 == y.layer1;
+            }
+            public static bool operator !=(DensityProfile x, DensityProfile y) { return !x.Equals(y); }
+            public override bool Equals(object obj) { return obj is DensityProfile && this == (DensityProfile)obj; }
+            public override int GetHashCode() { return layer0.GetHashCode() ^ layer1.GetHashCode(); }
+
+            public void SetInMaterial(string name, Material m)
+            {
+                layer0.SetInMaterial(name + "0", m);
+                layer1.SetInMaterial(name + "1", m);
+            }
+        }
+
         enum PrecomputePass
         {
             Transmittance = 0,
@@ -24,6 +97,21 @@ namespace PhysicalSky
 
         private bool m_needsRecompute = true;
         public bool NeedsRecompute { get { return m_needsRecompute || TexturesInvalid(); } }
+
+        [SerializeField]
+        private bool m_useOzone = true;
+        public bool UseOzone
+        {
+            get { return m_useOzone; }
+            set
+            {
+                if (m_useOzone != value)
+                {
+                    m_useOzone = value;
+                    m_needsRecompute = true;
+                }
+            }
+        }
 
         [SerializeField]
         private float m_constantSolarIrradiance = 1.5f;
@@ -249,16 +337,43 @@ namespace PhysicalSky
         // TODO: Make num scattering orders customizable?
         const int NUM_SCATTERING_ORDERS = 1;
         const float LENGTH_UNIT_IN_METERS = 1000.0f;
+
+        // (see http://rredc.nrel.gov/solar/spectra/am1.5/ASTMG173/ASTMG173.html),
+        // summed and averaged in each bin (e.g. the value for 360nm is the average
+        // of the ASTM G-173 values for all wavelengths between 360 and 370nm).
+        // Values in W.m^-2.
         const int LAMBDA_MIN = 360;
         const int LAMBDA_MAX = 830;
-        static readonly float[] SOLOAR_IRRADIANCE = {
+        static readonly float[] SOLAR_IRRADIANCE = {
     1.11776f, 1.14259f, 1.01249f, 1.14716f, 1.72765f, 1.73054f, 1.6887f, 1.61253f,
     1.91198f, 2.03474f, 2.02042f, 2.02212f, 1.93377f, 1.95809f, 1.91686f, 1.8298f,
     1.8685f, 1.8931f, 1.85149f, 1.8504f, 1.8341f, 1.8345f, 1.8147f, 1.78158f, 1.7533f,
     1.6965f, 1.68194f, 1.64654f, 1.6048f, 1.52143f, 1.55622f, 1.5113f, 1.474f, 1.4482f,
     1.41018f, 1.36775f, 1.34188f, 1.31429f, 1.28303f, 1.26758f, 1.2367f, 1.2082f,
     1.18737f, 1.14683f, 1.12362f, 1.1058f, 1.07124f, 1.04992f
-    };
+        };
+
+        // Values from http://www.iup.uni-bremen.de/gruppen/molspec/databases/
+        // referencespectra/o3spectra2011/index.html for 233K, summed and averaged in
+        // each bin (e.g. the value for 360nm is the average of the original values
+        // for all wavelengths between 360 and 370nm). Values in m^2.
+        static readonly float[] OZONE_CROSS_SECTION = {
+    1.18e-27f, 2.182e-28f, 2.818e-28f, 6.636e-28f, 1.527e-27f, 2.763e-27f, 5.52e-27f,
+    8.451e-27f, 1.582e-26f, 2.316e-26f, 3.669e-26f, 4.924e-26f, 7.752e-26f, 9.016e-26f,
+    1.48e-25f, 1.602e-25f, 2.139e-25f, 2.755e-25f, 3.091e-25f, 3.5e-25f, 4.266e-25f,
+    4.672e-25f, 4.398e-25f, 4.701e-25f, 5.019e-25f, 4.305e-25f, 3.74e-25f, 3.215e-25f,
+    2.662e-25f, 2.238e-25f, 1.852e-25f, 1.473e-25f, 1.209e-25f, 9.423e-26f, 7.455e-26f,
+    6.566e-26f, 5.105e-26f, 4.15e-26f, 4.228e-26f, 3.237e-26f, 2.451e-26f, 2.801e-26f,
+    2.534e-26f, 1.624e-26f, 1.465e-26f, 2.078e-26f, 1.383e-26f, 7.105e-27f
+        };
+
+        // From https://en.wikipedia.org/wiki/Dobson_unit, in molecules.m^-2.
+        const double kDobsonUnit = 2.687e20f;
+        // Maximum number density of ozone molecules, in m^-3 (computed so at to get
+        // 300 Dobson units of ozone - for this we divide 300 DU by the integral of
+        // the ozone density profile defined below, which is equal to 15km).
+        const float kMaxOzoneNumberDensity = (float)(300.0 * kDobsonUnit / 15000.0);
+
 
         // Computed values
         [NonSerialized]
@@ -273,6 +388,14 @@ namespace PhysicalSky
         private List<float> m_mieScattering = new List<float>();
         [NonSerialized]
         private List<float> m_mieExtinction = new List<float>();
+        [NonSerialized]
+        private List<float> m_absorptionExtinction = new List<float>();
+        [NonSerialized]
+        private DensityProfile m_rayleighDensity;
+        [NonSerialized]
+        private DensityProfile m_mieDensity;
+        [NonSerialized]
+        private DensityProfile m_absorptionDensity;
 
         // Computed textures
         [NonSerialized]
@@ -317,11 +440,18 @@ namespace PhysicalSky
 
         private Vector4 ScaleToWavelengths(List<float> v, float scale)
         {
-            return new Vector4(
+            Vector4 ret = new Vector4(
                 (float)(Interpolate(m_wavelengths, v, LAMBDA_R) * scale),
                 (float)(Interpolate(m_wavelengths, v, LAMBDA_G) * scale),
                 (float)(Interpolate(m_wavelengths, v, LAMBDA_B) * scale),
                 1.0f);
+            return ret;
+
+            //return new Vector4(
+            //    (float)(Interpolate(m_wavelengths, v, LAMBDA_R) * scale),
+            //    (float)(Interpolate(m_wavelengths, v, LAMBDA_G) * scale),
+            //    (float)(Interpolate(m_wavelengths, v, LAMBDA_B) * scale),
+            //    1.0f);
         }
 
         private void AllocateLookupTextures()
@@ -377,21 +507,23 @@ namespace PhysicalSky
             m.SetFloat("_sun_angular_radius", m_sunAngularRadius);
             m.SetFloat("_bottom_radius", m_planetaryRadius / LENGTH_UNIT_IN_METERS);
             m.SetFloat("_top_radius", (m_planetaryRadius + m_atmosphereThickness) / LENGTH_UNIT_IN_METERS);
-            m.SetFloat("_rayleigh_scale_height", m_rayleighScaleHeight / LENGTH_UNIT_IN_METERS);
+            m_rayleighDensity.SetInMaterial("_rayleigh_density", m);
             m.SetVector("_rayleigh_scattering", ScaleToWavelengths(m_rayleighScattering, LENGTH_UNIT_IN_METERS));
-            m.SetFloat("_mie_scale_height", m_mieScaleHeight / LENGTH_UNIT_IN_METERS);
+            m_mieDensity.SetInMaterial("_mie_density", m);
             m.SetVector("_mie_scattering", ScaleToWavelengths(m_mieScattering, LENGTH_UNIT_IN_METERS));
             m.SetVector("_mie_extinction", ScaleToWavelengths(m_mieExtinction, LENGTH_UNIT_IN_METERS));
             m.SetFloat("_mie_phase_function_g", m_miePhaseFunctionG);
+            m_absorptionDensity.SetInMaterial("_absorption_density", m);
+            m.SetVector("_absorption_extinction", ScaleToWavelengths(m_absorptionExtinction, LENGTH_UNIT_IN_METERS));
             m.SetVector("_ground_albedo", new Vector3(m_groundAlbedo, m_groundAlbedo, m_groundAlbedo));
             m.SetFloat("_mu_s_min", Mathf.Cos(m_maxSunZenithAngle));
-            m.SetVector("sun_radiance", new Vector3(SOLOAR_IRRADIANCE[0], SOLOAR_IRRADIANCE[1], SOLOAR_IRRADIANCE[2]) / m_sunSolidAngle);
             m.SetVector("sun_size", new Vector3(Mathf.Tan(m_sunAngularRadius), Mathf.Cos(m_sunAngularRadius), m_sunAngularRadius));
         }
 
         public void Compute()
         {
 #if PHYSICAL_SKY_DEBUG
+
             Debug.Log("Computing Atmospheric Lookup Textures");
 #endif
             float timerStartCompute = Time.realtimeSinceStartup;
@@ -407,6 +539,7 @@ namespace PhysicalSky
             m_rayleighScattering.Clear();
             m_mieScattering.Clear();
             m_mieExtinction.Clear();
+            m_absorptionExtinction.Clear();
 
             m_sunSolidAngle = Mathf.PI * m_sunAngularRadius * m_sunAngularRadius;
 
@@ -419,12 +552,25 @@ namespace PhysicalSky
                 if (USE_CONSTANT_SOLAR_SPECTRUM)
                     m_solarIrradiance.Add(m_constantSolarIrradiance);
                 else
-                    m_solarIrradiance.Add(SOLOAR_IRRADIANCE[(l - LAMBDA_MIN) / 10]);
+                    m_solarIrradiance.Add(SOLAR_IRRADIANCE[(l - LAMBDA_MIN) / 10]);
 
                 m_rayleighScattering.Add(m_rayleigh * Mathf.Pow(lambda, -4));
                 m_mieScattering.Add(mie * m_mieSingleScatteringAlbedo);
                 m_mieExtinction.Add(mie);
+                m_absorptionExtinction.Add(m_useOzone ? kMaxOzoneNumberDensity * OZONE_CROSS_SECTION[(l - LAMBDA_MIN) / 10] : 0.0f);
             }
+
+            m_rayleighDensity = new DensityProfile(new DensityProfileLayer(0.0f, 1.0f, -1.0f / m_rayleighScaleHeight, 0.0f, 0.0f));
+            m_mieDensity = new DensityProfile(new DensityProfileLayer(0.0f, 1.0f, -1.0f / m_mieScaleHeight, 0.0f, 0.0f));
+
+            // Density profile increasing linearly from 0 to 1 between 10 and 25km, and
+            // decreasing linearly from 1 to 0 between 25 and 40km. This is an approximate
+            // profile from http://www.kln.ac.lk/science/Chemistry/Teaching_Resources/
+            // Documents/Introduction%20to%20atmospheric%20chemistry.pdf (page 10).
+            // (ozone density)
+            m_absorptionDensity = new DensityProfile(
+                new DensityProfileLayer(25000.0f, 0.0f, 0.0f, 1.0f / 15000.0f, -2.0f / 3.0f),
+                new DensityProfileLayer(0.0f, 0.0f, 0.0f, -1.0f / 15000.0f, 8.0f / 3.0f));
 
             if (!m_precomputeMaterial)
                 m_precomputeMaterial = new Material(PrecomputeShader);
