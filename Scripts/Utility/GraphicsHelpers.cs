@@ -7,27 +7,6 @@ namespace PhysicalSky.Utilities
 {
 	public class GraphicsHelpers : MonoBehaviour
 	{
-        public static void DumpTexture(RenderTexture rt, string path)
-        {
-                Graphics.CopyTexture(rt, i, temp_rt, 0);
-                RenderTexture.active = temp_rt;
-
-            }
-
-            temp_rt.Release();
-
-            byte[] bytes = outputTexture.EncodeToEXR(Texture2D.EXRFlags.OutputAsFloat);
-
-            if (!path.ToLower().EndsWith(".exr"))
-                path = path + ".exr";
-
-            string directory = System.IO.Path.GetDirectoryName(path);
-            if (!System.IO.Directory.Exists(directory))
-                System.IO.Directory.CreateDirectory(directory);
-
-            System.IO.File.WriteAllBytes(path, bytes);
-        }
-
 		public static void Blit(RenderTexture dest, Material mat, int pass)
 		{
 			Graphics.Blit(null, dest, mat, pass);
