@@ -1027,6 +1027,14 @@ IrradianceSpectrum GetIrradiance(
 float3 GetExtrapolatedSingleMieScattering(
 	in AtmosphereParameters atmosphere, in float4 scattering)
 {
+#if SHADER_API_GLCORE
+	// HACK: Somehow, on GLCore, scattering.r manages to be a NAN here whenever it's written to the texture as 0, even tho it's not read from the texture as NAN.
+	if (isnan(scattering.r))
+	{
+		return float3(0.0, 0.0, 0.0);
+	}
+#endif
+
 	if (scattering.r == 0.0) 
 	{
 		return float3(0.0, 0.0, 0.0);
