@@ -92,11 +92,23 @@ namespace PhysicalSky
             AccumulateMultipleScattering = 7
         }
 
-        private const TextureWrapMode wrapMode = TextureWrapMode.Clamp;
-        private const FilterMode filterMode = FilterMode.Trilinear;
-
         private bool m_needsRecompute = true;
         public bool NeedsRecompute { get { return m_needsRecompute || TexturesInvalid(); } }
+
+        [SerializeField]
+        int m_scatteringOrders = 1;
+        public int ScatteringOrders
+        {
+            get { return m_scatteringOrders; }
+            set
+            {
+                if (m_scatteringOrders != value)
+                {
+                    m_scatteringOrders = value;
+                    m_needsRecompute = true;
+                }
+            }
+        }
 
         [SerializeField]
         private bool m_useOzone = true;
@@ -108,6 +120,21 @@ namespace PhysicalSky
                 if (m_useOzone != value)
                 {
                     m_useOzone = value;
+                    m_needsRecompute = true;
+                }
+            }
+        }
+
+        [SerializeField]
+        private bool m_useConstantSolarSpectrum = false;
+        public bool UseConstantSolarSpectrum
+        {
+            get { return m_useConstantSolarSpectrum; }
+            set
+            {
+                if (m_useConstantSolarSpectrum != value)
+                {
+                    m_useConstantSolarSpectrum = value;
                     m_needsRecompute = true;
                 }
             }
@@ -312,14 +339,14 @@ namespace PhysicalSky
         }
 
         // Constants
-        const bool USE_CONSTANT_SOLAR_SPECTRUM = true;
-
         const float LAMBDA_R = 680.0f;
         const float LAMBDA_G = 550.0f;
         const float LAMBDA_B = 440.0f;
 
-        // TODO: Try changing to half or float
-        const RenderTextureFormat LUT_FORMAT = RenderTextureFormat.ARGBFloat;
+        const RenderTextureFormat LUT_FORMAT = RenderTextureFormat.ARGBFloat; // TODO: Try changing to half or float
+
+        const TextureWrapMode LUT_WRAP_MODE = TextureWrapMode.Clamp;
+        const FilterMode LUT_FILTER_MODE = FilterMode.Trilinear;
 
         // Same as defined in PhysicalSkyCommon
         const int TRANSMITTANCE_TEXTURE_WIDTH = 256;
@@ -334,8 +361,6 @@ namespace PhysicalSky
         const int IRRADIANCE_TEXTURE_WIDTH = 64;
         const int IRRADIANCE_TEXTURE_HEIGHT = 16;
 
-        // TODO: Make num scattering orders customizable?
-        const int NUM_SCATTERING_ORDERS = 1;
         const float LENGTH_UNIT_IN_METERS = 1000.0f;
 
         // (see http://rredc.nrel.gov/solar/spectra/am1.5/ASTMG173/ASTMG173.html),
@@ -461,8 +486,8 @@ namespace PhysicalSky
             if (!m_transmittanceLUT.IsCreated())
             {
                 m_transmittanceLUT.useMipMap = false;
-                m_transmittanceLUT.wrapMode = wrapMode;
-                m_transmittanceLUT.filterMode = filterMode;
+                m_transmittanceLUT.wrapMode = LUT_WRAP_MODE;
+                m_transmittanceLUT.filterMode = LUT_FILTER_MODE;
                 m_transmittanceLUT.Create();
             }
 
@@ -473,8 +498,8 @@ namespace PhysicalSky
                 m_scatteringLUT.volumeDepth = SCATTERING_TEXTURE_DEPTH;
                 m_scatteringLUT.useMipMap = false;
                 m_scatteringLUT.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
-                m_scatteringLUT.wrapMode = wrapMode;
-                m_scatteringLUT.filterMode = filterMode;
+                m_scatteringLUT.wrapMode = LUT_WRAP_MODE;
+                m_scatteringLUT.filterMode = LUT_FILTER_MODE;
                 m_scatteringLUT.Create();
             }
 
@@ -483,8 +508,8 @@ namespace PhysicalSky
             if (!m_irradianceLUT.IsCreated())
             {
                 m_irradianceLUT.useMipMap = false;
-                m_irradianceLUT.wrapMode = wrapMode;
-                m_irradianceLUT.filterMode = filterMode;
+                m_irradianceLUT.wrapMode = LUT_WRAP_MODE;
+                m_irradianceLUT.filterMode = LUT_FILTER_MODE;
                 m_irradianceLUT.Create();
             }
         }
@@ -549,7 +574,7 @@ namespace PhysicalSky
                 float mie = m_mieAngstromBeta / m_mieScaleHeight * Mathf.Pow(lambda, -m_mieAngstromAlpha);
                 m_wavelengths.Add(l);
 
-                if (USE_CONSTANT_SOLAR_SPECTRUM)
+                if (m_useConstantSolarSpectrum)
                     m_solarIrradiance.Add(m_constantSolarIrradiance);
                 else
                     m_solarIrradiance.Add(SOLAR_IRRADIANCE[(l - LAMBDA_MIN) / 10]);
@@ -579,32 +604,32 @@ namespace PhysicalSky
 
             RenderTexture DeltaIrradianceTexture = new RenderTexture(IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
             DeltaIrradianceTexture.useMipMap = false;
-            DeltaIrradianceTexture.wrapMode = wrapMode;
-            DeltaIrradianceTexture.filterMode = filterMode;
+            DeltaIrradianceTexture.wrapMode = LUT_WRAP_MODE;
+            DeltaIrradianceTexture.filterMode = LUT_FILTER_MODE;
             DeltaIrradianceTexture.Create();
 
             RenderTexture DeltaRayleighScatteringTexture = new RenderTexture(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
             DeltaRayleighScatteringTexture.volumeDepth = SCATTERING_TEXTURE_DEPTH;
             DeltaRayleighScatteringTexture.useMipMap = false;
             DeltaRayleighScatteringTexture.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
-            DeltaRayleighScatteringTexture.wrapMode = wrapMode;
-            DeltaRayleighScatteringTexture.filterMode = filterMode;
+            DeltaRayleighScatteringTexture.wrapMode = LUT_WRAP_MODE;
+            DeltaRayleighScatteringTexture.filterMode = LUT_FILTER_MODE;
             DeltaRayleighScatteringTexture.Create();
 
             RenderTexture DeltaMieScatteringTexture = new RenderTexture(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
             DeltaMieScatteringTexture.volumeDepth = SCATTERING_TEXTURE_DEPTH;
             DeltaMieScatteringTexture.useMipMap = false;
             DeltaMieScatteringTexture.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
-            DeltaMieScatteringTexture.wrapMode = wrapMode;
-            DeltaMieScatteringTexture.filterMode = filterMode;
+            DeltaMieScatteringTexture.wrapMode = LUT_WRAP_MODE;
+            DeltaMieScatteringTexture.filterMode = LUT_FILTER_MODE;
             DeltaMieScatteringTexture.Create();
 
             RenderTexture DeltaScatteringDensityTexture = new RenderTexture(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
             DeltaScatteringDensityTexture.volumeDepth = SCATTERING_TEXTURE_DEPTH;
             DeltaScatteringDensityTexture.useMipMap = false;
             DeltaScatteringDensityTexture.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
-            DeltaScatteringDensityTexture.wrapMode = wrapMode;
-            DeltaScatteringDensityTexture.filterMode = filterMode;
+            DeltaScatteringDensityTexture.wrapMode = LUT_WRAP_MODE;
+            DeltaScatteringDensityTexture.filterMode = LUT_FILTER_MODE;
             DeltaScatteringDensityTexture.Create();
 
             // DeltaMultipleScatteringTexture is only needed to compute scattering
@@ -628,7 +653,7 @@ namespace PhysicalSky
             Utilities.GraphicsHelpers.Blit3D(new RenderTexture[3] { DeltaRayleighScatteringTexture, DeltaMieScatteringTexture, m_scatteringLUT}, m_precomputeMaterial, (int)PrecomputePass.SingleScattering);
 
             // Compute to the nth order of scattering, in sequence
-            for (int scatteringOrder = 2; scatteringOrder <= NUM_SCATTERING_ORDERS; ++scatteringOrder)
+            for (int scatteringOrder = 2; scatteringOrder <= m_scatteringOrders; ++scatteringOrder)
             {
                 m_precomputeMaterial.SetTexture("transmittance_texture", m_transmittanceLUT);
                 m_precomputeMaterial.SetTexture("single_rayleigh_scattering_texture", DeltaRayleighScatteringTexture);
@@ -706,6 +731,7 @@ namespace PhysicalSky
         /// </summary>
         protected void OnValidate()
         {
+            ScatteringOrders = Mathf.Clamp(ScatteringOrders, 0, 10);
             ConstantSolarIrradiance = Mathf.Max(0.001f, ConstantSolarIrradiance);
             SunAngularRadius = Mathf.Max(0.001f, SunAngularRadius);
             PlanetaryRadius = Mathf.Max(1.0f, PlanetaryRadius);
