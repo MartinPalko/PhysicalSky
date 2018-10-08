@@ -465,18 +465,11 @@ namespace PhysicalSky
 
         private Vector4 ScaleToWavelengths(List<float> v, float scale)
         {
-            Vector4 ret = new Vector4(
-                (float)(Interpolate(m_wavelengths, v, LAMBDA_R) * scale),
-                (float)(Interpolate(m_wavelengths, v, LAMBDA_G) * scale),
-                (float)(Interpolate(m_wavelengths, v, LAMBDA_B) * scale),
+            return new Vector4(
+                (Interpolate(m_wavelengths, v, LAMBDA_R) * scale),
+                (Interpolate(m_wavelengths, v, LAMBDA_G) * scale),
+                (Interpolate(m_wavelengths, v, LAMBDA_B) * scale),
                 1.0f);
-            return ret;
-
-            //return new Vector4(
-            //    (float)(Interpolate(m_wavelengths, v, LAMBDA_R) * scale),
-            //    (float)(Interpolate(m_wavelengths, v, LAMBDA_G) * scale),
-            //    (float)(Interpolate(m_wavelengths, v, LAMBDA_B) * scale),
-            //    1.0f);
         }
 
         private void AllocateLookupTextures()
