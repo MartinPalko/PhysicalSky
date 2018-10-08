@@ -176,7 +176,7 @@
 					i.pos.xy,
 					scattering_order);
 
-				return float4(0,0,0, 0);
+				return float4(irradianceResult, 0);
 			}
 			ENDCG
 		}
