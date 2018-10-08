@@ -70,12 +70,10 @@
 				AtmosphereParameters params = GetAtmosphereParameters();
 
 				float3 view_ray = normalize(IN.view.xyz);
-				float lightshaft_fadein_hack = smoothstep(0.02, 0.04, dot(camera, sun_direction));
 				float shadow_length = 0.0;
 
-				float3 transmittance;
-				float3 radiance = GetSkyRadiance(params, transmittance_texture, scattering_texture, scattering_texture, camera, view_ray, shadow_length, sun_direction, transmittance);
-
+				float3 transmittance = 0;
+				float3 radiance = GetSkyRadiance(params, transmittance_texture, scattering_texture, camera, view_ray, shadow_length, sun_direction, transmittance);
 				// HACK: No other real way of telling if we're being rendered as part of a reflection capture (in which we shouldn't be drawing the sun)
 				bool reflection_capture = any(_LightColor0.xyz == half3(0, 0, 0));
 				if (!reflection_capture && dot(sun_direction, view_ray) > sun_size.y)

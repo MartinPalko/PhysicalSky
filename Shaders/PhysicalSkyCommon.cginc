@@ -1045,7 +1045,6 @@ float3 GetExtrapolatedSingleMieScattering(
 IrradianceSpectrum GetCombinedScattering(
 	in AtmosphereParameters atmosphere,
 	in ReducedScatteringTexture scattering_texture,
-	in ReducedScatteringTexture single_mie_scattering_texture,
 	Length r, Number mu, Number mu_s, Number nu,
 	bool ray_r_mu_intersects_ground,
 	out IrradianceSpectrum single_mie_scattering) 
@@ -1064,7 +1063,6 @@ RadianceSpectrum GetSkyRadiance(
 	in AtmosphereParameters atmosphere,
 	in TransmittanceTexture transmittance_texture,
 	in ReducedScatteringTexture scattering_texture,
-	in ReducedScatteringTexture single_mie_scattering_texture,
 	Position camera, in Direction view_ray, Length shadow_length,
 	in Direction sun_direction, out DimensionlessSpectrum transmittance) 
 {
@@ -1101,7 +1099,7 @@ RadianceSpectrum GetSkyRadiance(
 	if (shadow_length == 0.0 * m)
 	{
 		scattering = GetCombinedScattering(
-			atmosphere, scattering_texture, single_mie_scattering_texture,
+			atmosphere, scattering_texture,
 			r, mu, mu_s, nu, ray_r_mu_intersects_ground,
 			single_mie_scattering);
 	}
@@ -1118,7 +1116,7 @@ RadianceSpectrum GetSkyRadiance(
 		Number mu_s_p = (r * mu_s + d * nu) / r_p;
 
 		scattering = GetCombinedScattering(
-			atmosphere, scattering_texture, single_mie_scattering_texture,
+			atmosphere, scattering_texture,
 			r_p, mu_p, mu_s_p, nu, ray_r_mu_intersects_ground,
 			single_mie_scattering);
 		DimensionlessSpectrum shadow_transmittance =
@@ -1166,7 +1164,7 @@ RadianceSpectrum GetSkyRadianceToPoint(
 
 	IrradianceSpectrum single_mie_scattering;
 	IrradianceSpectrum scattering = GetCombinedScattering(
-		atmosphere, scattering_texture, single_mie_scattering_texture,
+		atmosphere, scattering_texture,
 		r, mu, mu_s, nu, ray_r_mu_intersects_ground,
 		single_mie_scattering);
 
@@ -1182,7 +1180,7 @@ RadianceSpectrum GetSkyRadianceToPoint(
 
 	IrradianceSpectrum single_mie_scattering_p;
 	IrradianceSpectrum scattering_p = GetCombinedScattering(
-		atmosphere, scattering_texture, single_mie_scattering_texture,
+		atmosphere, scattering_texture,
 		r_p, mu_p, mu_s_p, nu, ray_r_mu_intersects_ground,
 		single_mie_scattering_p);
 

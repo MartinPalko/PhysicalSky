@@ -39,7 +39,7 @@
 				float shadow_length = 0.0;
 
 				float3 transmittance;
-				float3 radiance = GetSkyRadiance(params, transmittance_texture, scattering_texture, scattering_texture, camera, view_ray, shadow_length, sun_direction, transmittance);
+				float3 radiance = GetSkyRadiance(params, transmittance_texture, scattering_texture, camera, view_ray, shadow_length, sun_direction, transmittance);
 
 				if (dot(sun_direction, view_ray) > sun_size.y)
 				{
