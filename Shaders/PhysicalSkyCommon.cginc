@@ -987,8 +987,7 @@ void GetRMuSFromIrradianceTextureUv(in AtmosphereParameters atmosphere, in float
 	mu_s = ClampCosine(2.0 * x_mu_s - 1.0);
 }
 
-const float2 IRRADIANCE_TEXTURE_SIZE =
-float2(IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT);
+#define IRRADIANCE_TEXTURE_SIZE float2(IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT)
 
 IrradianceSpectrum ComputeDirectIrradianceTexture(
 	in AtmosphereParameters atmosphere,
