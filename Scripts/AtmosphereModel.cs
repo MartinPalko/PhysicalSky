@@ -7,6 +7,87 @@ namespace PhysicalSky
     [CreateAssetMenu(fileName = "NewAtmosphereModel", menuName = "PhysicalSky/AtmosphereModel")]
     public class AtmosphereModel : ScriptableObject, IAtmosphereModel
     {
+        public static class TextureFactory
+        {
+            public enum Preset
+            {
+                Transmittance,
+                Irradiance,
+                Scattering
+            }
+
+            private static FilterMode GetFilterMode(Preset preset)
+            {
+                if (preset == Preset.Scattering)
+                    return FilterMode.Trilinear;
+                else
+                    return FilterMode.Bilinear;
+            }
+
+            private static RenderTextureDescriptor GetTextureDescriptor(Preset preset)
+            {
+                RenderTextureDescriptor desc;
+                switch (preset)
+                {
+                    case Preset.Transmittance:
+                        desc = new RenderTextureDescriptor(TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT);
+                        break;
+                    case Preset.Irradiance:
+                        desc = new RenderTextureDescriptor(IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT);
+                        break;
+                    case Preset.Scattering:
+                        desc = new RenderTextureDescriptor(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT);
+                        desc.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
+                        desc.volumeDepth = SCATTERING_TEXTURE_DEPTH;
+                        break;
+                    default:
+                        throw new System.NotImplementedException();
+                }
+                
+                desc.useMipMap = false;
+                desc.sRGB = false;
+                desc.colorFormat = RenderTextureFormat.ARGBFloat; // TODO: Try changing to half or float
+                desc.depthBufferBits = 0;
+                return desc;
+            }
+
+            public static void CreateRenderTexture(ref RenderTexture tex, Preset preset)
+            {
+                if (tex == null)
+                    tex = new RenderTexture(GetTextureDescriptor(preset));
+
+                if (!tex.IsCreated())
+                {
+                    tex.wrapMode = TextureWrapMode.Clamp;
+                    tex.filterMode = GetFilterMode(preset);
+                    tex.Create();
+                }
+            }
+
+            public static void ReleaseRenderTexture(ref RenderTexture tex)
+            {
+                if (tex != null)
+                {
+                    tex.Release();
+                }
+                tex = null;
+            }
+
+            public static RenderTexture CreateTempRenderTexture(Preset preset)
+            {
+                RenderTexture tex = RenderTexture.GetTemporary(GetTextureDescriptor(preset));
+                tex.wrapMode = TextureWrapMode.Clamp;
+                tex.filterMode = GetFilterMode(preset);
+                return tex;
+            }
+
+            public static void ReleaseTempRenderTexture(ref RenderTexture tex)
+            {
+                RenderTexture.ReleaseTemporary(tex);
+                tex = null;
+            }
+        }
+
         // Matches that in PhysicalSkyCommon.cginc
         public struct DensityProfileLayer
         {
@@ -371,10 +452,6 @@ namespace PhysicalSky
         }
 
         // Constants
-        const RenderTextureFormat LUT_FORMAT = RenderTextureFormat.ARGBFloat; // TODO: Try changing to half or float
-
-        const TextureWrapMode LUT_WRAP_MODE = TextureWrapMode.Clamp;
-        const FilterMode LUT_FILTER_MODE = FilterMode.Trilinear;
 
         // Same as defined in PhysicalSkyCommon
         const int TRANSMITTANCE_TEXTURE_WIDTH = 256;
@@ -671,49 +748,16 @@ namespace PhysicalSky
 
         private void AllocateLookupTextures()
         {
-            if (!m_transmittanceLUT)
-                m_transmittanceLUT = new RenderTexture(TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
-            if (!m_transmittanceLUT.IsCreated())
-            {
-                m_transmittanceLUT.useMipMap = false;
-                m_transmittanceLUT.wrapMode = LUT_WRAP_MODE;
-                m_transmittanceLUT.filterMode = LUT_FILTER_MODE;
-                m_transmittanceLUT.Create();
-            }
-
-            if (!m_scatteringLUT)
-                m_scatteringLUT = new RenderTexture(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
-            if (!m_scatteringLUT.IsCreated())
-            {
-                m_scatteringLUT.volumeDepth = SCATTERING_TEXTURE_DEPTH;
-                m_scatteringLUT.useMipMap = false;
-                m_scatteringLUT.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
-                m_scatteringLUT.wrapMode = LUT_WRAP_MODE;
-                m_scatteringLUT.filterMode = LUT_FILTER_MODE;
-                m_scatteringLUT.Create();
-            }
-
-            if (!m_irradianceLUT)
-                m_irradianceLUT = new RenderTexture(IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
-            if (!m_irradianceLUT.IsCreated())
-            {
-                m_irradianceLUT.useMipMap = false;
-                m_irradianceLUT.wrapMode = LUT_WRAP_MODE;
-                m_irradianceLUT.filterMode = LUT_FILTER_MODE;
-                m_irradianceLUT.Create();
-            }
+            TextureFactory.CreateRenderTexture(ref m_transmittanceLUT, TextureFactory.Preset.Transmittance);
+            TextureFactory.CreateRenderTexture(ref m_irradianceLUT, TextureFactory.Preset.Irradiance);
+            TextureFactory.CreateRenderTexture(ref m_scatteringLUT, TextureFactory.Preset.Scattering);
         }
 
         private void ReleaseLookupTextures()
         {
-            if (m_transmittanceLUT && m_transmittanceLUT.IsCreated())
-                m_transmittanceLUT.Release();
-
-            if (m_scatteringLUT && m_scatteringLUT.IsCreated())
-                m_scatteringLUT.Release();
-
-            if (m_irradianceLUT && m_irradianceLUT.IsCreated())
-                m_irradianceLUT.Release();
+            TextureFactory.ReleaseRenderTexture(ref m_transmittanceLUT);
+            TextureFactory.ReleaseRenderTexture(ref m_irradianceLUT);
+            TextureFactory.ReleaseRenderTexture(ref m_scatteringLUT);
         }
 
         public void SetShaderUniforms(Material m)
@@ -860,6 +904,7 @@ namespace PhysicalSky
                         coeff(lambdas[0], 1), coeff(lambdas[1], 1), coeff(lambdas[2], 1),
                         coeff(lambdas[0], 2), coeff(lambdas[1], 2), coeff(lambdas[2], 2)
                     };
+
                     Compute(lambdas, luminanceFromRadiance, i == 0 ? false : true);
                 }
 
@@ -882,35 +927,10 @@ namespace PhysicalSky
         {
             Debug.Assert(luminanceFromRadiance.Length == 9);
 
-            RenderTexture DeltaIrradianceTexture = new RenderTexture(IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
-            DeltaIrradianceTexture.useMipMap = false;
-            DeltaIrradianceTexture.wrapMode = LUT_WRAP_MODE;
-            DeltaIrradianceTexture.filterMode = LUT_FILTER_MODE;
-            DeltaIrradianceTexture.Create();
-
-            RenderTexture DeltaRayleighScatteringTexture = new RenderTexture(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
-            DeltaRayleighScatteringTexture.volumeDepth = SCATTERING_TEXTURE_DEPTH;
-            DeltaRayleighScatteringTexture.useMipMap = false;
-            DeltaRayleighScatteringTexture.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
-            DeltaRayleighScatteringTexture.wrapMode = LUT_WRAP_MODE;
-            DeltaRayleighScatteringTexture.filterMode = LUT_FILTER_MODE;
-            DeltaRayleighScatteringTexture.Create();
-
-            RenderTexture DeltaMieScatteringTexture = new RenderTexture(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
-            DeltaMieScatteringTexture.volumeDepth = SCATTERING_TEXTURE_DEPTH;
-            DeltaMieScatteringTexture.useMipMap = false;
-            DeltaMieScatteringTexture.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
-            DeltaMieScatteringTexture.wrapMode = LUT_WRAP_MODE;
-            DeltaMieScatteringTexture.filterMode = LUT_FILTER_MODE;
-            DeltaMieScatteringTexture.Create();
-
-            RenderTexture DeltaScatteringDensityTexture = new RenderTexture(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, 0, LUT_FORMAT, RenderTextureReadWrite.Linear);
-            DeltaScatteringDensityTexture.volumeDepth = SCATTERING_TEXTURE_DEPTH;
-            DeltaScatteringDensityTexture.useMipMap = false;
-            DeltaScatteringDensityTexture.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
-            DeltaScatteringDensityTexture.wrapMode = LUT_WRAP_MODE;
-            DeltaScatteringDensityTexture.filterMode = LUT_FILTER_MODE;
-            DeltaScatteringDensityTexture.Create();
+            RenderTexture DeltaIrradianceTexture = TextureFactory.CreateTempRenderTexture(TextureFactory.Preset.Irradiance);
+            RenderTexture DeltaRayleighScatteringTexture = TextureFactory.CreateTempRenderTexture(TextureFactory.Preset.Scattering);
+            RenderTexture DeltaMieScatteringTexture = TextureFactory.CreateTempRenderTexture(TextureFactory.Preset.Scattering);
+            RenderTexture DeltaScatteringDensityTexture = TextureFactory.CreateTempRenderTexture(TextureFactory.Preset.Scattering);
 
             // DeltaMultipleScatteringTexture is only needed to compute scattering
             // order 3 or more, while DeltaRayleighScatteringTexture and
@@ -969,10 +989,10 @@ namespace PhysicalSky
             RenderTexture.active = null;
 
             // Release temporary textures.
-            DeltaIrradianceTexture.Release();
-            DeltaRayleighScatteringTexture.Release();
-            DeltaMieScatteringTexture.Release();
-            DeltaScatteringDensityTexture.Release();
+            TextureFactory.ReleaseTempRenderTexture(ref DeltaIrradianceTexture);
+            TextureFactory.ReleaseTempRenderTexture(ref DeltaRayleighScatteringTexture);
+            TextureFactory.ReleaseTempRenderTexture(ref DeltaMieScatteringTexture);
+            TextureFactory.ReleaseTempRenderTexture(ref DeltaScatteringDensityTexture);
         }
 
         public void ReleaseResources()
