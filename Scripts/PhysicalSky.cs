@@ -78,7 +78,7 @@ namespace PhysicalSky
 #if PHYSICAL_SKY_DEBUG
             m_StarMeshObject.hideFlags = HideFlags.DontSave;
 #else
-            starMeshObject.hideFlags = HideFlags.HideAndDontSave;
+            m_StarMeshObject.hideFlags = HideFlags.HideAndDontSave;
 #endif
             m_StarMeshFilter = m_StarMeshObject.AddComponent<MeshFilter>();
             m_StarMeshFilter.mesh = StarMap.CreateStarMesh();     
