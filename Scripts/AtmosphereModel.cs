@@ -755,7 +755,8 @@ namespace PhysicalSky
 
             if (SystemInfo.graphicsShaderLevel < 50)
             {
-                Debug.LogError("Computing atmospheric lookup textures requires shader model 5.0 or higher!");
+                string currentLevelString = (SystemInfo.graphicsShaderLevel / 10).ToString() + "." + (SystemInfo.graphicsShaderLevel % 10).ToString();
+                Debug.LogError("Computing atmospheric lookup textures requires shader model 5.0 or higher! Current is " + currentLevelString);
                 return;
             }
 
