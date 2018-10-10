@@ -14,12 +14,7 @@
 			#pragma fragment frag
 			
 			#include "UnityCG.cginc"
-			#include "PhysicalSkyCommon.cginc"
-			#include "AtmosphereUniforms.cginc"
-
-			uniform sampler2D transmittance_texture;
-			uniform sampler3D scattering_texture;
-			uniform sampler2D irradiance_texture;
+			#include "PhysicalSkyCG.cginc"
 
 			uniform float3 camera;
 			uniform float3 sun_size;
@@ -31,7 +26,6 @@
 				AtmosphereParameters params = GetAtmosphereParameters();
 
 				// View rays, scaled to the size of the sun
-				//float distance = ;
 				float3 untransformedviewray = normalize(float3(i.uv * 2 - 1, -(1 / tan(sun_size.x))));
 
 				// Rotate the view rays to face towards the sun
@@ -39,14 +33,13 @@
 				float shadow_length = 0.0;
 
 				float3 transmittance;
-				float3 radiance = GetSkyRadiance(params, transmittance_texture, scattering_texture, camera, view_ray, shadow_length, sun_direction, transmittance);
+				GetSkyLuminance(camera, view_ray, shadow_length, sun_direction, transmittance);
 
 				if (dot(sun_direction, view_ray) > sun_size.y)
 				{
 					return fixed4(transmittance * GetSolarRadiance(params), 1);
 				}
 				return 0;
-				
 			}
 			ENDCG
 		}

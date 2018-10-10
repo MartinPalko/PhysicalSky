@@ -1,3 +1,9 @@
+#ifndef ATMOSPHERE_UNIFORMS
+#define ATMOSPHERE_UNIFORMS
+
+uniform float3 _sky_spectral_radiance_to_luminance;
+uniform float3 _sun_spectral_radiance_to_luminance;
+
 uniform IrradianceSpectrum _solar_irradiance;
 uniform Angle _sun_angular_radius;
 uniform Length _bottom_radius;
@@ -20,6 +26,9 @@ AtmosphereParameters GetAtmosphereParameters()
 {
 	AtmosphereParameters params;
 
+	params.sky_spectral_radiance_to_luminance = _sky_spectral_radiance_to_luminance;
+	params.sun_spectral_radiance_to_luminance = _sun_spectral_radiance_to_luminance;
+
 	params.solar_irradiance = _solar_irradiance;
 	params.sun_angular_radius = _sun_angular_radius;
 	params.bottom_radius = _bottom_radius;
@@ -37,6 +46,6 @@ AtmosphereParameters GetAtmosphereParameters()
 	params.absorption_extinction = _absorption_extinction;
 	params.ground_albedo = _ground_albedo;
 	params.mu_s_min = _mu_s_min;
-
 	return params;
 }
+#endif

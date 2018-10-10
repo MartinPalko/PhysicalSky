@@ -20,7 +20,6 @@
 			#include "UnityCG.cginc"
 			#include "Lighting.cginc"
 			#include "PhysicalSkyCommon.cginc"
-			#include "AtmosphereUniforms.cginc"
 
 			uniform sampler2D transmittance_texture;
 

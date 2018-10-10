@@ -15,14 +15,12 @@
 			
 			#include "UnityCG.cginc"
 			#include "PhysicalSkyCommon.cginc"
-			#include "AtmosphereUniforms.cginc"
 
-
-			fixed4 frag (v2f_img i) : COLOR
+			float4 frag (v2f_img i) : COLOR
 			{
 				AtmosphereParameters params = GetAtmosphereParameters();
 				float3 result = ComputeTransmittanceToTopAtmosphereBoundaryTexture(params, i.pos.xy);
-				return fixed4(result.rgb, 1.0);
+				return float4(result.rgb, 1.0);
 			}
 			ENDCG
 		}
@@ -37,7 +35,6 @@
 
 			#include "UnityCG.cginc"
 			#include "PhysicalSkyCommon.cginc"
-			#include "AtmosphereUniforms.cginc"
 
 			uniform sampler2D transmittance_texture;
 
@@ -72,7 +69,6 @@
 			#include "UnityCG.cginc"
 			#include "Blit3d.cginc"
 			#include "PhysicalSkyCommon.cginc"
-			#include "AtmosphereUniforms.cginc"
 
 			uniform sampler2D transmittance_texture;
 
@@ -91,17 +87,49 @@
 				float3 outRayleigh;
 				float3 outMie;
 
-				ComputeSingleScatteringTexture(params, transmittance_texture, uvw, outRayleigh, outMie);					
+				ComputeSingleScatteringTexture(params, transmittance_texture, uvw, outRayleigh, outMie);
 
 				f2a OUT;
 				OUT.delta_rayleigh = float4(outRayleigh, 1);
 				OUT.delta_mie = float4(outMie, 1);
-				OUT.scattering = float4(outRayleigh.rgb, outMie.r);
+				OUT.scattering = float4(0, 0, 0, 0); // Initializing scatteringLUT
 				return OUT;
 			}
 			ENDCG
 		}
-		// Pass 3, Compute Scattering Density
+		// Pass 3, Combine Single Scattering
+		Pass
+		{
+			Tags {"RenderType"="Transparent"}
+			Blend One One // Additive Blend
+
+			CGPROGRAM
+			#pragma target 5.0
+
+			#pragma vertex vert_img3d
+			#pragma fragment frag
+
+			#include "UnityCG.cginc"
+			#include "Blit3d.cginc"
+			#include "PhysicalSkyCommon.cginc"
+
+			uniform sampler3D single_rayleigh_scattering_texture;
+			uniform sampler3D single_mie_scattering_texture;
+
+			uniform float _luminance_from_radiance[9];
+
+			float4 frag (v2f_img3d i) : COLOR
+			{
+				float3x3 luminance_from_radiance = {_luminance_from_radiance};
+
+				float3 rayleigh = tex3Dlod(single_rayleigh_scattering_texture, float4(i.uvw, 0)).rgb;
+				float3 mie = tex3Dlod(single_mie_scattering_texture, float4(i.uvw, 0)).rgb;
+
+				return float4(mul(luminance_from_radiance, rayleigh), mul(luminance_from_radiance, mie).r);
+			}
+			ENDCG
+		}
+		// Pass 4, Compute Scattering Density
 		Pass
 		{
 			CGPROGRAM
@@ -113,16 +141,16 @@
 			#include "UnityCG.cginc"
 			#include "Blit3d.cginc"
 			#include "PhysicalSkyCommon.cginc"
-			#include "AtmosphereUniforms.cginc"
 
 			uniform sampler2D transmittance_texture;
 			uniform sampler3D single_rayleigh_scattering_texture;
 			uniform sampler3D single_mie_scattering_texture;
 			uniform sampler3D multiple_scattering_texture;
 			uniform sampler2D irradiance_texture;
+
 			uniform int scattering_order;
 
-			fixed4 frag (v2f_img3d i) : COLOR
+			float4 frag (v2f_img3d i) : COLOR
 			{
 				AtmosphereParameters params = GetAtmosphereParameters();
 
@@ -142,7 +170,7 @@
 			}
 			ENDCG
 		}
-		// Pass 4, Compute Indirect Irradiance
+		// Pass 5, Compute Indirect Irradiance
 		Pass
 		{
 			CGPROGRAM
@@ -154,7 +182,6 @@
 
 			#include "UnityCG.cginc"
 			#include "PhysicalSkyCommon.cginc"
-			#include "AtmosphereUniforms.cginc"
 
 			uniform sampler3D single_rayleigh_scattering_texture;
 			uniform sampler3D single_mie_scattering_texture;
@@ -180,7 +207,7 @@
 			}
 			ENDCG
 		}
-		// Pass 5, Accumulate Indirect Irradiance
+		// Pass 6, Accumulate Indirect Irradiance
 		Pass
 		{
 			Tags {"RenderType"="Transparent"}
@@ -195,17 +222,20 @@
 
 			#include "UnityCG.cginc"
 			#include "PhysicalSkyCommon.cginc"
-			#include "AtmosphereUniforms.cginc"
 
 			uniform sampler2D irradiance_texture;
 
+			uniform float _luminance_from_radiance[9];
+
 			float4 frag (v2f_img i) : COLOR
 			{
-				return tex2Dlod(irradiance_texture, float4(i.uv, 0, 0));
+				float3x3 luminance_from_radiance = {_luminance_from_radiance};
+
+				return float4(mul(luminance_from_radiance, tex2Dlod(irradiance_texture, float4(i.uv, 0, 0)).rgb), 0);
 			}
 			ENDCG
 		}
-		// Pass 6, Compute Multiple Scattering
+		// Pass 7, Compute Multiple Scattering
 		Pass
 		{
 			CGPROGRAM
@@ -218,7 +248,6 @@
 			#include "UnityCG.cginc"
 			#include "Blit3d.cginc"
 			#include "PhysicalSkyCommon.cginc"
-			#include "AtmosphereUniforms.cginc"
 
 			uniform sampler2D transmittance_texture;
 			uniform sampler3D scattering_density_texture;
@@ -241,7 +270,7 @@
 			}
 			ENDCG
 		}
-		// Pass 7, Accumulate Multiple Scattering
+		// Pass 8, Accumulate Multiple Scattering
 		Pass
 		{
 			Tags {"RenderType"="Transparent"}
@@ -256,18 +285,21 @@
 			#include "UnityCG.cginc"
 			#include "Blit3d.cginc"
 			#include "PhysicalSkyCommon.cginc"
-			#include "AtmosphereUniforms.cginc"
 
 			uniform sampler3D multiple_scattering_texture;
 
+			uniform float _luminance_from_radiance[9];
+
 			float4 frag (v2f_img3d i) : COLOR
 			{
+				float3x3 luminance_from_radiance = {_luminance_from_radiance};
+
 				float4 texSample = tex3Dlod(multiple_scattering_texture, float4(i.uvw, 0));
 
 				float3 deltaMultipleScatteringResult = texSample.rgb;
 				float nu = texSample.a;
 
-				return float4(deltaMultipleScatteringResult / RayleighPhaseFunction(nu), 0);
+				return float4(mul(luminance_from_radiance, deltaMultipleScatteringResult) / RayleighPhaseFunction(nu), 0);
 			}
 			ENDCG
 		}

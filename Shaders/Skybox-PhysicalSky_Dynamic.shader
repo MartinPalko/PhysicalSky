@@ -17,12 +17,7 @@
 
 			#include "UnityCG.cginc"
 			#include "Lighting.cginc"
-			#include "PhysicalSkyCommon.cginc"
-			#include "AtmosphereUniforms.cginc"
-
-			uniform sampler2D transmittance_texture;
-			uniform sampler3D scattering_texture;
-			uniform sampler2D irradiance_texture;
+			#include "PhysicalSkyCG.cginc"
 
 			uniform float3 camera;
 			uniform float3 sun_size;
@@ -67,25 +62,23 @@
 			{
 				float3 sun_direction = _WorldSpaceLightPos0.xyz;
 
-				AtmosphereParameters params = GetAtmosphereParameters();
-
 				float3 view_ray = normalize(IN.view.xyz);
 				float shadow_length = 0.0;
 
 				float3 transmittance = 0;
-				float3 radiance = GetSkyRadiance(params, transmittance_texture, scattering_texture, camera, view_ray, shadow_length, sun_direction, transmittance);
+				float3 luminance = GetSkyLuminance(camera, view_ray, shadow_length, sun_direction, transmittance);
 				// HACK: No other real way of telling if we're being rendered as part of a reflection capture (in which we shouldn't be drawing the sun)
 				bool reflection_capture = any(_LightColor0.xyz == half3(0, 0, 0));
 				if (!reflection_capture && dot(sun_direction, view_ray) > sun_size.y)
 				{
-					radiance += transmittance * GetSolarRadiance(params);
+					luminance += transmittance * GetSolarLuminance();
 				}
 
-				radiance *= sun_brightness;
+				luminance *= sun_brightness;
 
-				radiance += texCUBE(star_cubemap, mul(view_ray, star_rotation)).rgb * star_brightness * transmittance;
+				luminance += texCUBE(star_cubemap, mul(view_ray, star_rotation)).rgb * star_brightness * transmittance;
 
-				half3 result = LINEAR_TO_OUTPUT(radiance * sky_exposure);
+				half3 result = LINEAR_TO_OUTPUT(luminance * sky_exposure);
 
 				return half4(result, 1.0f);
 			}

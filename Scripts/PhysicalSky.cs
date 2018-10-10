@@ -178,7 +178,11 @@ namespace PhysicalSky
             {
                 ConfigureMaterial(m_SkyMaterial);
                 m_SkyMaterial.SetFloat("sky_exposure", SkyExposure);
-                m_SkyMaterial.SetFloat("sun_brightness", SunBrightnessMultiplier);
+
+                // TEMP/HACK: When using luminance, values are much brighter than radiance.
+                // Need a better solution to handle that.
+                float luminanceCompensation = m_Atmosphere.Luminance != AtmosphereModel.LuminanceType.none ? 1e-05f : 1.0f;
+                m_SkyMaterial.SetFloat("sun_brightness", SunBrightnessMultiplier * luminanceCompensation);
 
                 if (m_StarMap)
                 {

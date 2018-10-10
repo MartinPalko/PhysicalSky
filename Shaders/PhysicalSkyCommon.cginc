@@ -55,6 +55,9 @@
 * THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef PHYSICAL_SKY_COMMON
+#define PHYSICAL_SKY_COMMON
+
 #define TRANSMITTANCE_TEXTURE_WIDTH 256
 #define TRANSMITTANCE_TEXTURE_HEIGHT 64
 #define SCATTERING_TEXTURE_R_SIZE 32
@@ -171,6 +174,9 @@ struct DensityProfile
 //The atmosphere parameters are then defined by the following struct:
 struct AtmosphereParameters 
 {
+	float3 sky_spectral_radiance_to_luminance;
+	float3 sun_spectral_radiance_to_luminance;
+
 	// The solar irradiance at the top of the atmosphere.
 	IrradianceSpectrum solar_irradiance;
 	// The sun's angular radius. Warning: the implementation uses approximations
@@ -221,6 +227,8 @@ struct AtmosphereParameters
 	// Earth case, 102 degrees is a good choice - yielding mu_s_min = -0.2).
 	Number mu_s_min;
 };
+
+#include "AtmosphereUniforms.cginc"
 
 float4 scatteringTextureSample(sampler3D s, float4 uvwz)
 {
@@ -1131,7 +1139,6 @@ RadianceSpectrum GetSkyRadianceToPoint(
 	in AtmosphereParameters atmosphere,
 	in TransmittanceTexture transmittance_texture,
 	in ReducedScatteringTexture scattering_texture,
-	in ReducedScatteringTexture single_mie_scattering_texture,
 	Position camera, in Position _point, Length shadow_length,
 	in Direction sun_direction, out DimensionlessSpectrum transmittance)
 {
@@ -1228,3 +1235,4 @@ IrradianceSpectrum GetSunAndSkyIrradiance(
 			mu_s) *
 		max(dot(normal, sun_direction), 0.0);
 }
+#endif

@@ -16,6 +16,7 @@ public class AtmosphereModelEditor : Editor
     // Properties
     protected SerializedProperty m_Script;
     protected SerializedProperty m_scatteringOrders;
+    protected SerializedProperty m_luminance;
     protected SerializedProperty m_useOzone;
     protected SerializedProperty m_useConstantSolarSpectrum;
     protected SerializedProperty m_constantSolarIrradiance;
@@ -47,6 +48,7 @@ public class AtmosphereModelEditor : Editor
     {
         m_Script = serializedObject.FindProperty("m_Script");
         m_scatteringOrders = serializedObject.FindProperty("m_scatteringOrders");
+        m_luminance = serializedObject.FindProperty("m_luminance");
         m_useOzone = serializedObject.FindProperty("m_useOzone");
         m_useConstantSolarSpectrum = serializedObject.FindProperty("m_useConstantSolarSpectrum");
         m_constantSolarIrradiance = serializedObject.FindProperty("m_constantSolarIrradiance");
@@ -89,6 +91,7 @@ public class AtmosphereModelEditor : Editor
             {
                 EditorGUI.indentLevel++;
                 EditorGUILayout.PropertyField(property: m_scatteringOrders);
+                EditorGUILayout.PropertyField(property: m_luminance);
                 EditorGUILayout.PropertyField(property: m_useOzone);
                 EditorGUILayout.PropertyField(property: m_useConstantSolarSpectrum);
                 EditorGUILayout.PropertyField(property: m_constantSolarIrradiance);
