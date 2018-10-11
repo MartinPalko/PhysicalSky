@@ -7,7 +7,7 @@ namespace PhysicalSky
     public class PhysicalSky : MonoBehaviour, IPhysicalSky
     {
         public Vector3 SunDirection { get { return -transform.forward; } set { transform.rotation = Quaternion.LookRotation(-value); } }
-        public Quaternion StarRotation { get { return m_StarMeshObject.transform.rotation; } set { m_StarMeshObject.transform.rotation = value; } }
+        public Quaternion StarRotation { get { return m_StarMeshObject ? m_StarMeshObject.transform.rotation : Quaternion.identity; } set { if (m_StarMeshObject) m_StarMeshObject.transform.rotation = value; } }
         
         [SerializeField]
         private float m_SunLightBrightnessMultiplier = 1.0f;
@@ -72,18 +72,22 @@ namespace PhysicalSky
         {
             m_SkyMaterial = new Material(m_SkyShader);
             m_SunRadianceMaterial = new Material(m_SunRadianceShader);
-            m_StarMeshMaterial = new Material(m_StarMeshShader);
 
-            m_StarMeshObject = new GameObject("StarMesh");
+            if (StarMap)
+            {
+                m_StarMeshMaterial = new Material(m_StarMeshShader);
+
+                m_StarMeshObject = new GameObject("StarMesh");
 #if PHYSICAL_SKY_DEBUG
             m_StarMeshObject.hideFlags = HideFlags.DontSave;
 #else
-            m_StarMeshObject.hideFlags = HideFlags.HideAndDontSave;
+                m_StarMeshObject.hideFlags = HideFlags.HideAndDontSave;
 #endif
-            m_StarMeshFilter = m_StarMeshObject.AddComponent<MeshFilter>();
-            m_StarMeshFilter.mesh = StarMap.CreateStarMesh();     
-            MeshRenderer starMeshRenderer = m_StarMeshObject.AddComponent<MeshRenderer>();
-            starMeshRenderer.material = m_StarMeshMaterial;
+                m_StarMeshFilter = m_StarMeshObject.AddComponent<MeshFilter>();
+                m_StarMeshFilter.mesh = StarMap.CreateStarMesh();
+                MeshRenderer starMeshRenderer = m_StarMeshObject.AddComponent<MeshRenderer>();
+                starMeshRenderer.material = m_StarMeshMaterial;
+            }
             
             m_SunLight = GetComponent<Light>();
             m_SunLight.type = LightType.Directional;
@@ -94,12 +98,14 @@ namespace PhysicalSky
 #if UNITY_EDITOR
             if (!Application.isPlaying)
             {
-                DestroyImmediate(m_StarMeshObject);
+                if (m_StarMeshObject)
+                    DestroyImmediate(m_StarMeshObject);
             }
             else
 #endif
             {
-                Destroy(m_StarMeshObject);
+                if (m_StarMeshObject)
+                    Destroy(m_StarMeshObject);
             }
         }
 
