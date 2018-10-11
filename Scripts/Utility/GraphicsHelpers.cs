@@ -85,6 +85,7 @@ namespace PhysicalSky.Utilities
                 outputTexture.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, rt.height * i, false);
             }
 
+            RenderTexture.active = null;
             temp_rt.Release();
 
             byte[] bytes = outputTexture.EncodeToEXR(Texture2D.EXRFlags.OutputAsFloat);
