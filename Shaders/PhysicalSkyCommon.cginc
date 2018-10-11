@@ -58,6 +58,9 @@
 #ifndef PHYSICAL_SKY_COMMON
 #define PHYSICAL_SKY_COMMON
 
+//#define NO_TEXTURE3D // Todo: define based on platform
+
+
 #define TRANSMITTANCE_TEXTURE_WIDTH 256
 #define TRANSMITTANCE_TEXTURE_HEIGHT 64
 #define SCATTERING_TEXTURE_R_SIZE 32
@@ -65,8 +68,13 @@
 #define SCATTERING_TEXTURE_MU_S_SIZE 32
 #define SCATTERING_TEXTURE_NU_SIZE 8
 #define SCATTERING_TEXTURE_WIDTH SCATTERING_TEXTURE_NU_SIZE * SCATTERING_TEXTURE_MU_S_SIZE
-#define SCATTERING_TEXTURE_HEIGHT SCATTERING_TEXTURE_MU_SIZE
-#define SCATTERING_TEXTURE_DEPTH SCATTERING_TEXTURE_R_SIZE
+#ifdef NO_TEXTURE3D
+	#define SCATTERING_TEXTURE_HEIGHT SCATTERING_TEXTURE_R_SIZE * SCATTERING_TEXTURE_MU_SIZE
+	#define SCATTERING_TEXTURE_DEPTH 1
+#else
+	#define SCATTERING_TEXTURE_HEIGHT SCATTERING_TEXTURE_MU_SIZE
+	#define SCATTERING_TEXTURE_DEPTH SCATTERING_TEXTURE_R_SIZE
+#endif
 #define IRRADIANCE_TEXTURE_WIDTH 64
 #define IRRADIANCE_TEXTURE_HEIGHT 16
 
@@ -119,10 +127,17 @@
 #define Illuminance3 float3
 
 #define TransmittanceTexture sampler2D
-#define AbstractScatteringTexture sampler3D
-#define ReducedScatteringTexture sampler3D
-#define ScatteringTexture sampler3D
-#define ScatteringDensityTexture sampler3D
+#ifdef NO_TEXTURE3D
+	#define AbstractScatteringTexture sampler2D
+	#define ReducedScatteringTexture sampler2D
+	#define ScatteringTexture sampler2D
+	#define ScatteringDensityTexture sampler2D
+#else
+	#define AbstractScatteringTexture sampler3D
+	#define ReducedScatteringTexture sampler3D
+	#define ScatteringTexture sampler3D
+	#define ScatteringDensityTexture sampler3D
+#endif
 #define IrradianceTexture sampler2D
 
 static const Length m = 1.0; // Meter
@@ -230,17 +245,28 @@ struct AtmosphereParameters
 
 #include "AtmosphereUniforms.cginc"
 
-float4 scatteringTextureSample(sampler3D s, float4 uvwz)
+float4 scatteringTextureSample(ScatteringTexture s, float3 uvw)
+{
+#ifdef NO_TEXTURE3D // TO FIGURE
+	float tex_coord_z = uvw.z * Number(SCATTERING_TEXTURE_R_SIZE - 1);
+	float tex_z = floor(tex_coord_z);
+	float l = tex_coord_z - tex_z;
+	float2 uv0 = float2(uvw.x, (tex_z + uvw.y) / Number(SCATTERING_TEXTURE_R_SIZE));
+	float2 uv1 = float2(uvw.x, (tex_z + 1.0 + uvw.y) / Number(SCATTERING_TEXTURE_R_SIZE));
+	return lerp(tex2Dlod(s, float4(uv0, 0, 0)), tex2Dlod(s, float4(uv1, 0, 0)), l);
+#else
+	return tex3Dlod(s, float4(uvw, 0));
+#endif
+}
+
+float4 scatteringTextureSample(ScatteringTexture s, float4 uvwz)
 {
 	float tex_coord_x = uvwz.x * Number(SCATTERING_TEXTURE_NU_SIZE - 1);
 	float tex_x = floor(tex_coord_x);
 	float l = tex_coord_x - tex_x;
-	float3 uvw0 = float3((tex_x + uvwz.y) / Number(SCATTERING_TEXTURE_NU_SIZE),
-		uvwz.z, uvwz.w);
-	float3 uvw1 = float3((tex_x + 1.0 + uvwz.y) / Number(SCATTERING_TEXTURE_NU_SIZE),
-		uvwz.z, uvwz.w);
-
-	return lerp(tex3Dlod(s, float4(uvw0, 0)), tex3Dlod(s, float4(uvw1, 0)), l);
+	float3 uvw0 = float3((tex_x + uvwz.y) / Number(SCATTERING_TEXTURE_NU_SIZE), uvwz.z, uvwz.w);
+	float3 uvw1 = float3((tex_x + 1.0 + uvwz.y) / Number(SCATTERING_TEXTURE_NU_SIZE), uvwz.z, uvwz.w);
+	return lerp(scatteringTextureSample(s, uvw0), scatteringTextureSample(s, uvw1), l);
 }
 
 Number ClampCosine(Number mu)
@@ -650,14 +676,27 @@ void GetRMuMuSNuFromScatteringTextureFragCoord(
 		SCATTERING_TEXTURE_NU_SIZE - 1,
 		SCATTERING_TEXTURE_MU_S_SIZE,
 		SCATTERING_TEXTURE_MU_SIZE,
-		SCATTERING_TEXTURE_R_SIZE);
-	Number frag_coord_nu =
-		floor(frag_coord.x / Number(SCATTERING_TEXTURE_MU_S_SIZE));
-	Number frag_coord_mu_s =
-		fmod(frag_coord.x, Number(SCATTERING_TEXTURE_MU_S_SIZE));
-	float4 uvwz = 
-		float4(frag_coord_nu, frag_coord_mu_s, frag_coord.y, frag_coord.z) /
-		SCATTERING_TEXTURE_SIZE;
+#ifdef NO_TEXTURE3D
+		SCATTERING_TEXTURE_R_SIZE - 1
+#else
+		SCATTERING_TEXTURE_R_SIZE
+#endif
+		);
+	
+	float4 uvwz;
+	uvwz.x = floor(frag_coord.x / Number(SCATTERING_TEXTURE_MU_S_SIZE));
+	uvwz.y = fmod(frag_coord.x, Number(SCATTERING_TEXTURE_MU_S_SIZE));
+	
+#ifdef NO_TEXTURE3D
+	uvwz.w = floor(frag_coord.y / Number(SCATTERING_TEXTURE_MU_SIZE));
+	uvwz.z = fmod(frag_coord.y, Number(SCATTERING_TEXTURE_MU_SIZE));
+#else
+	uvwz.z = frag_coord.y;
+	uvwz.w = frag_coord.z;
+#endif
+
+	uvwz /= SCATTERING_TEXTURE_SIZE;
+
 	GetRMuMuSNuFromScatteringTextureUvwz(
 		atmosphere, uvwz, r, mu, mu_s, nu, ray_r_mu_intersects_ground);
 	// Clamp nu to its valid range of values, given mu and mu_s.

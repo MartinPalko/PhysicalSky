@@ -9,11 +9,29 @@ namespace PhysicalSky
     {
         public static class TextureFactory
         {
+            // Same as defined in PhysicalSkyCommon
+            const int TRANSMITTANCE_TEXTURE_WIDTH = 256;
+            const int TRANSMITTANCE_TEXTURE_HEIGHT = 64;
+            const int SCATTERING_TEXTURE_R_SIZE = 32;
+            const int SCATTERING_TEXTURE_MU_SIZE = 128;
+            const int SCATTERING_TEXTURE_MU_S_SIZE = 32;
+            const int SCATTERING_TEXTURE_NU_SIZE = 8;
+            const int SCATTERING_TEXTURE_WIDTH = SCATTERING_TEXTURE_NU_SIZE * SCATTERING_TEXTURE_MU_S_SIZE;
+            static readonly int SCATTERING_TEXTURE_HEIGHT = Supports3DTextures() ? SCATTERING_TEXTURE_MU_SIZE : SCATTERING_TEXTURE_R_SIZE * SCATTERING_TEXTURE_MU_SIZE;
+            static readonly int SCATTERING_TEXTURE_DEPTH = Supports3DTextures() ? SCATTERING_TEXTURE_R_SIZE : 1;
+            const int IRRADIANCE_TEXTURE_WIDTH = 64;
+            const int IRRADIANCE_TEXTURE_HEIGHT = 16;
+
             public enum Preset
             {
                 Transmittance,
                 Irradiance,
                 Scattering
+            }
+
+            public static bool Supports3DTextures()
+            {
+                return true;
             }
 
             private static FilterMode GetFilterMode(Preset preset)
@@ -37,8 +55,11 @@ namespace PhysicalSky
                         break;
                     case Preset.Scattering:
                         desc = new RenderTextureDescriptor(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT);
-                        desc.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
-                        desc.volumeDepth = SCATTERING_TEXTURE_DEPTH;
+                        if (Supports3DTextures())
+                        {
+                            desc.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
+                            desc.volumeDepth = SCATTERING_TEXTURE_DEPTH;
+                        }
                         break;
                     default:
                         throw new System.NotImplementedException();
@@ -453,19 +474,6 @@ namespace PhysicalSky
 
         // Constants
 
-        // Same as defined in PhysicalSkyCommon
-        const int TRANSMITTANCE_TEXTURE_WIDTH = 256;
-        const int TRANSMITTANCE_TEXTURE_HEIGHT = 64;
-        const int SCATTERING_TEXTURE_R_SIZE = 32;
-        const int SCATTERING_TEXTURE_MU_SIZE = 128;
-        const int SCATTERING_TEXTURE_MU_S_SIZE = 32;
-        const int SCATTERING_TEXTURE_NU_SIZE = 8;
-        const int SCATTERING_TEXTURE_WIDTH = SCATTERING_TEXTURE_NU_SIZE * SCATTERING_TEXTURE_MU_S_SIZE;
-        const int SCATTERING_TEXTURE_HEIGHT = SCATTERING_TEXTURE_MU_SIZE;
-        const int SCATTERING_TEXTURE_DEPTH = SCATTERING_TEXTURE_R_SIZE;
-        const int IRRADIANCE_TEXTURE_WIDTH = 64;
-        const int IRRADIANCE_TEXTURE_HEIGHT = 16;
-
         const float LENGTH_UNIT_IN_METERS = 1000.0f;
 
         // The conversion factor between watts and lumens.
@@ -797,10 +805,10 @@ namespace PhysicalSky
 #endif
             float timerStartCompute = Time.realtimeSinceStartup;
 
-            if (SystemInfo.graphicsShaderLevel < 50)
+            if (SystemInfo.graphicsShaderLevel < 30)
             {
                 string currentLevelString = (SystemInfo.graphicsShaderLevel / 10).ToString() + "." + (SystemInfo.graphicsShaderLevel % 10).ToString();
-                Debug.LogError("Computing atmospheric lookup textures requires shader model 5.0 or higher! Current is " + currentLevelString);
+                Debug.LogError("Computing atmospheric lookup textures requires shader model 3.0 or higher! Current is " + currentLevelString);
                 return;
             }
 
@@ -966,7 +974,6 @@ namespace PhysicalSky
             else
                 Utilities.GraphicsHelpers.Blit3D(new RenderTexture[3] { DeltaRayleighScatteringTexture, DeltaMieScatteringTexture, m_scatteringLUT }, m_precomputeMaterial, (int)PrecomputePass.ComputeSingleScattering);
             Utilities.GraphicsHelpers.Blit3D(m_scatteringLUT, m_precomputeMaterial, (int)PrecomputePass.AccumulateSingleScattering);
-
             // Compute to the nth order of scattering, in sequence
             for (int scatteringOrder = 2; scatteringOrder <= m_scatteringOrders; ++scatteringOrder)
             {

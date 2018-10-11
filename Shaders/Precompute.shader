@@ -36,7 +36,7 @@
 			#include "UnityCG.cginc"
 			#include "PhysicalSkyCommon.cginc"
 
-			uniform sampler2D transmittance_texture;
+			uniform TransmittanceTexture transmittance_texture;
 
 			struct f2a
 			{
@@ -70,7 +70,7 @@
 			#include "Blit3d.cginc"
 			#include "PhysicalSkyCommon.cginc"
 
-			uniform sampler2D transmittance_texture;
+			uniform TransmittanceTexture transmittance_texture;
 
 			struct f2a
 			{
@@ -113,8 +113,8 @@
 			#include "Blit3d.cginc"
 			#include "PhysicalSkyCommon.cginc"
 
-			uniform sampler3D single_rayleigh_scattering_texture;
-			uniform sampler3D single_mie_scattering_texture;
+			uniform ScatteringTexture single_rayleigh_scattering_texture;
+			uniform ScatteringTexture single_mie_scattering_texture;
 
 			uniform float _luminance_from_radiance[9];
 
@@ -122,8 +122,13 @@
 			{
 				float3x3 luminance_from_radiance = {_luminance_from_radiance};
 
+#ifdef NO_TEXTURE3D
+				float3 rayleigh = tex2Dlod(single_rayleigh_scattering_texture, float4(i.uvw, 0)).rgb;
+				float3 mie = tex2Dlod(single_mie_scattering_texture, float4(i.uvw, 0)).rgb;
+#else
 				float3 rayleigh = tex3Dlod(single_rayleigh_scattering_texture, float4(i.uvw, 0)).rgb;
 				float3 mie = tex3Dlod(single_mie_scattering_texture, float4(i.uvw, 0)).rgb;
+#endif
 
 				return float4(mul(luminance_from_radiance, rayleigh), mul(luminance_from_radiance, mie).r);
 			}
@@ -142,11 +147,11 @@
 			#include "Blit3d.cginc"
 			#include "PhysicalSkyCommon.cginc"
 
-			uniform sampler2D transmittance_texture;
-			uniform sampler3D single_rayleigh_scattering_texture;
-			uniform sampler3D single_mie_scattering_texture;
-			uniform sampler3D multiple_scattering_texture;
-			uniform sampler2D irradiance_texture;
+			uniform TransmittanceTexture transmittance_texture;
+			uniform ScatteringTexture single_rayleigh_scattering_texture;
+			uniform ScatteringTexture single_mie_scattering_texture;
+			uniform ScatteringTexture multiple_scattering_texture;
+			uniform IrradianceTexture irradiance_texture;
 
 			uniform int scattering_order;
 
@@ -183,10 +188,10 @@
 			#include "UnityCG.cginc"
 			#include "PhysicalSkyCommon.cginc"
 
-			uniform sampler3D single_rayleigh_scattering_texture;
-			uniform sampler3D single_mie_scattering_texture;
-			uniform sampler3D multiple_scattering_texture;
-			uniform sampler2D irradiance_texture;
+			uniform ScatteringTexture single_rayleigh_scattering_texture;
+			uniform ScatteringTexture single_mie_scattering_texture;
+			uniform ScatteringTexture multiple_scattering_texture;
+			uniform IrradianceTexture irradiance_texture;
 			
 			uniform int scattering_order;
 
@@ -223,7 +228,7 @@
 			#include "UnityCG.cginc"
 			#include "PhysicalSkyCommon.cginc"
 
-			uniform sampler2D irradiance_texture;
+			uniform IrradianceTexture irradiance_texture;
 
 			uniform float _luminance_from_radiance[9];
 
@@ -249,8 +254,8 @@
 			#include "Blit3d.cginc"
 			#include "PhysicalSkyCommon.cginc"
 
-			uniform sampler2D transmittance_texture;
-			uniform sampler3D scattering_density_texture;
+			uniform TransmittanceTexture transmittance_texture;
+			uniform ScatteringDensityTexture scattering_density_texture;
 
 			float4 frag (v2f_img3d i) : COLOR
 			{
@@ -275,6 +280,7 @@
 		{
 			Tags {"RenderType"="Transparent"}
 			Blend One One // Additive Blend
+
 			CGPROGRAM
 			
 			#pragma target 5.0
@@ -286,7 +292,7 @@
 			#include "Blit3d.cginc"
 			#include "PhysicalSkyCommon.cginc"
 
-			uniform sampler3D multiple_scattering_texture;
+			uniform ScatteringTexture multiple_scattering_texture;
 
 			uniform float _luminance_from_radiance[9];
 
@@ -294,7 +300,11 @@
 			{
 				float3x3 luminance_from_radiance = {_luminance_from_radiance};
 
+#ifdef NO_TEXTURE3D
+				float4 texSample = tex2Dlod(multiple_scattering_texture, float4(i.uvw, 0));
+#else
 				float4 texSample = tex3Dlod(multiple_scattering_texture, float4(i.uvw, 0));
+#endif
 
 				float3 deltaMultipleScatteringResult = texSample.rgb;
 				float nu = texSample.a;

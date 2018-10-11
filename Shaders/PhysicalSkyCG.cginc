@@ -3,11 +3,11 @@
 
 #include "PhysicalSkyCommon.cginc"
 
-uniform sampler2D transmittance_texture;
-uniform sampler3D scattering_texture;
-uniform sampler2D irradiance_texture;
+uniform TransmittanceTexture transmittance_texture;
+uniform ScatteringTexture scattering_texture;
+uniform IrradianceTexture irradiance_texture;
 
-float3 GetSolarLuminance() 
+float3 GetSolarLuminance()
 {
 	AtmosphereParameters params = GetAtmosphereParameters();
 	return params.solar_irradiance /
