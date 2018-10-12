@@ -112,11 +112,7 @@ namespace PhysicalSky
         private void ConfigureMaterial(Material m)
         {
             m_Atmosphere.SetShaderUniforms(m);
-            m.SetTexture("transmittance_texture", m_Atmosphere.TransmittanceLUT);
-            m.SetTexture("scattering_texture", m_Atmosphere.ScatteringLUT);
-            m.SetTexture("irradiance_texture", m_Atmosphere.IrradianceLUT);
-
-            m.SetVector("camera", new Vector3(0, (m_Atmosphere.PlanetaryRadius / 1000) + m_Altitude, 0));
+            m.SetVector("camera", new Vector3(0, (m_Atmosphere.Parameters.planetaryRadius / 1000) + m_Altitude, 0));
         }
 
         private void LateUpdate()
@@ -187,7 +183,7 @@ namespace PhysicalSky
 
                 // TEMP/HACK: When using luminance, values are much brighter than radiance.
                 // Need a better solution to handle that.
-                float luminanceCompensation = m_Atmosphere.Luminance != AtmosphereModel.LuminanceType.none ? 1e-05f : 1.0f;
+                float luminanceCompensation = m_Atmosphere.Parameters.luminance != AtmosphereParameters.LuminanceType.none ? 1e-05f : 1.0f;
                 m_SkyMaterial.SetFloat("sun_brightness", SunBrightnessMultiplier * luminanceCompensation);
 
                 if (m_StarMap)
@@ -214,8 +210,8 @@ namespace PhysicalSky
                 m_StarMeshMaterial.SetFloat("star_intensity_multiplier", m_StarBrightnessMultiplier * SkyExposure);
                 m_StarMeshMaterial.SetFloat("star_intensity_power", m_StarBrightnessPower);
                 
-                float D = m_Atmosphere.PlanetaryRadius + m_Altitude * 1000;
-                float R = m_Atmosphere.PlanetaryRadius;
+                float D = m_Atmosphere.Parameters.planetaryRadius + m_Altitude * 1000;
+                float R = m_Atmosphere.Parameters.planetaryRadius;
                 float planetAngularRad = 2 * Mathf.Acos(Mathf.Sqrt(Mathf.Pow(D, 2) - Mathf.Pow(R, 2)) / D);
                 m_StarMeshMaterial.SetFloat("planet_size", planetAngularRad);              
             }

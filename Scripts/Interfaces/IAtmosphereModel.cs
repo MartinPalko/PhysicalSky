@@ -4,9 +4,9 @@ namespace PhysicalSky
 {
     public interface IAtmosphereModel
     {
-        bool NeedsRecompute { get; }        
+        bool NeedsRecompute { get; }
         void SetShaderUniforms(Material m);
-        void Compute();
+        bool Compute(bool force = false);
         void ReleaseResources();
     }
 }

@@ -3,9 +3,9 @@
 
 #include "PhysicalSkyCommon.cginc"
 
-uniform TransmittanceTexture transmittance_texture;
-uniform ScatteringTexture scattering_texture;
-uniform IrradianceTexture irradiance_texture;
+uniform TransmittanceTexture _transmittance_texture;
+uniform ScatteringTexture _scattering_texture;
+uniform IrradianceTexture _irradiance_texture;
 
 float3 GetSolarLuminance()
 {
@@ -20,8 +20,8 @@ float3 GetSkyLuminance(
 	Direction sun_direction, out DimensionlessSpectrum transmittance) 
 {
 	AtmosphereParameters params = GetAtmosphereParameters();
-	return GetSkyRadiance(params, transmittance_texture,
-		scattering_texture,
+	return GetSkyRadiance(params, _transmittance_texture,
+		_scattering_texture,
 		camera, view_ray, shadow_length, sun_direction, transmittance) *
 		params.sky_spectral_radiance_to_luminance;
 }
@@ -31,8 +31,8 @@ float3 GetSkyLuminanceToPoint(
 	Direction sun_direction, out DimensionlessSpectrum transmittance)
 {
 	AtmosphereParameters params = GetAtmosphereParameters();
-	return GetSkyRadianceToPoint(params, transmittance_texture,
-		scattering_texture,
+	return GetSkyRadianceToPoint(params, _transmittance_texture,
+		_scattering_texture,
 		camera, p, shadow_length, sun_direction, transmittance) *
 		params.sky_spectral_radiance_to_luminance;
 }
@@ -43,7 +43,7 @@ float3 GetSunAndSkyIlluminance(
 {
 	AtmosphereParameters params = GetAtmosphereParameters();
 	IrradianceSpectrum sun_irradiance = GetSunAndSkyIrradiance(
-		params, transmittance_texture, irradiance_texture, p, normal,
+		params, _transmittance_texture, _irradiance_texture, p, normal,
 		sun_direction, sky_irradiance);
 	sky_irradiance *= params.sky_spectral_radiance_to_luminance;
 	return sun_irradiance * params.sun_spectral_radiance_to_luminance;

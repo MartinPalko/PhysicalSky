@@ -19,9 +19,7 @@
 
 			#include "UnityCG.cginc"
 			#include "Lighting.cginc"
-			#include "PhysicalSkyCommon.cginc"
-
-			uniform sampler2D transmittance_texture;
+			#include "PhysicalSkyCG.cginc"
 
 			uniform float3 camera;
 
@@ -78,7 +76,7 @@
 					float r = length(camera);
 					float rmu = dot(camera, worldDirection);
 					float mu = rmu / r;
-					float3 atmosphereTransmittance = GetTransmittanceToTopAtmosphereBoundary(params, transmittance_texture, r, mu);
+					float3 atmosphereTransmittance = GetTransmittanceToTopAtmosphereBoundary(params, _transmittance_texture, r, mu);
 					OUT.color.rgb *= atmosphereTransmittance;
 				}
 
