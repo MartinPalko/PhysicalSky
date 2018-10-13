@@ -114,6 +114,22 @@ namespace PhysicalSky
                 }
             }
 
+            [Serializable]
+            public struct ComputedValues
+            {
+                public float m_sunSolidAngle;
+                public Vector3 m_sky_k;
+                public Vector3 m_sun_k;
+                public DensityProfile m_rayleighDensity;
+                public DensityProfile m_mieDensity;
+                public DensityProfile m_absorptionDensity;
+                public Vector3 m_solarIrradiance;
+                public Vector3 m_rayleighScattering;
+                public Vector3 m_mieScattering;
+                public Vector3 m_mieExtinction;
+                public Vector3 m_absorptionExtinction;
+            }
+
             private enum PrecomputePass
             {
                 ComputeTransmittance = 0,
@@ -283,16 +299,16 @@ namespace PhysicalSky
             // the ozone density profile defined below, which is equal to 15km).
             const float kMaxOzoneNumberDensity = (float)(300.0 * kDobsonUnit / 15000.0);
 
-            private static float Interpolate(List<float> wavelengths, List<float> wavelength_function, float wavelength)
+            private static float Interpolate(float[] wavelengths, float[] wavelength_function, float wavelength)
             {
-                Debug.Assert(wavelengths.Count > 0);
-                Debug.Assert(wavelength_function.Count == wavelengths.Count);
+                Debug.Assert(wavelengths.Length > 0);
+                Debug.Assert(wavelength_function.Length == wavelengths.Length);
 
                 if (wavelength < wavelengths[0])
                 {
                     return wavelength_function[0];
                 }
-                for (int i = 0; i < wavelengths.Count - 1; ++i)
+                for (int i = 0; i < wavelengths.Length - 1; ++i)
                 {
                     if (wavelength < wavelengths[i + 1])
                     {
@@ -300,7 +316,7 @@ namespace PhysicalSky
                         return wavelength_function[i] * (1.0f - u) + wavelength_function[i + 1] * u;
                     }
                 }
-                return wavelength_function[wavelength_function.Count - 1];
+                return wavelength_function[wavelength_function.Length - 1];
             }
 
             private static float CieColorMatchingFunctionTableValue(float wavelength, int column)
@@ -321,8 +337,8 @@ namespace PhysicalSky
 
             // The returned constants are in lumen.nm / watt.
             private static Vector3 ComputeSpectralRadianceToLuminanceFactors(
-                List<float> wavelengths,
-                List<float> solar_irradiance,
+                float[] wavelengths,
+                float[] solar_irradiance,
                 float lambda_power)
             {
                 Vector3 k = Vector3.zero;
@@ -352,12 +368,12 @@ namespace PhysicalSky
                 return k;
             }
 
-            private static Vector4 ScaleToWavelengths(AtmosphereModel model, List<float> v, Vector3 lambdas, float scale)
+            private static Vector4 ScaleToWavelengths(float[] wavelengths, float[] v, Vector3 lambdas, float scale)
             {
                 return new Vector4(
-                    (Interpolate(model.m_wavelengths, v, lambdas.x) * scale),
-                    (Interpolate(model.m_wavelengths, v, lambdas.y) * scale),
-                    (Interpolate(model.m_wavelengths, v, lambdas.z) * scale),
+                    (Interpolate(wavelengths, v, lambdas.x) * scale),
+                    (Interpolate(wavelengths, v, lambdas.y) * scale),
+                    (Interpolate(wavelengths, v, lambdas.z) * scale),
                     1.0f);
             }
 
@@ -377,37 +393,36 @@ namespace PhysicalSky
                 SetDensityProfileLayerShaderUniforms(p.layer1, name + "1", m);
             }
 
-            private static void SetShaderUniforms(AtmosphereModel model, AtmosphereParameters parameters, Material material, Vector3 lambdas)
+            public static void SetShaderUniforms(AtmosphereModel model, Material material)
+            {
+                material.SetTexture("_transmittance_texture", model.m_transmittanceLUT);
+                material.SetTexture("_scattering_texture", model.m_scatteringLUT);
+                material.SetTexture("_irradiance_texture", model.m_irradianceLUT);
+                SetShaderUniforms(model.m_computedValues, model.m_computedParameters, material);
+            }
+
+            private static void SetShaderUniforms(ComputedValues values, AtmosphereParameters parameters, Material material)
             {
                 material.SetInt("_use_luminance", parameters.luminance == AtmosphereParameters.LuminanceType.none ? 0 : 1);
-                material.SetVector("_sky_spectral_radiance_to_luminance", parameters.luminance != AtmosphereParameters.LuminanceType.none ? model.m_sky_k : Vector3.one);
-                material.SetVector("_sun_spectral_radiance_to_luminance", parameters.luminance != AtmosphereParameters.LuminanceType.none ? model.m_sun_k : Vector3.one);
+                material.SetVector("_sky_spectral_radiance_to_luminance", parameters.luminance != AtmosphereParameters.LuminanceType.none ? values.m_sky_k : Vector3.one);
+                material.SetVector("_sun_spectral_radiance_to_luminance", parameters.luminance != AtmosphereParameters.LuminanceType.none ? values.m_sun_k : Vector3.one);
 
-                material.SetVector("_solar_irradiance", ScaleToWavelengths(model, model.m_solarIrradiance, lambdas, 1.0f));
+                material.SetVector("_solar_irradiance", values.m_solarIrradiance);
                 material.SetFloat("_sun_angular_radius", parameters.sunAngularRadius);
                 material.SetFloat("_bottom_radius", parameters.planetaryRadius / LENGTH_UNIT_IN_METERS);
                 material.SetFloat("_top_radius", (parameters.planetaryRadius + parameters.atmosphereThickness) / LENGTH_UNIT_IN_METERS);
-                SetDensityProfileShaderUniforms(model.m_rayleighDensity, "_rayleigh_density", material);
-                material.SetVector("_rayleigh_scattering", ScaleToWavelengths(model, model.m_rayleighScattering, lambdas, LENGTH_UNIT_IN_METERS));
-                SetDensityProfileShaderUniforms(model.m_mieDensity, "_mie_density", material);
-                material.SetVector("_mie_scattering", ScaleToWavelengths(model, model.m_mieScattering, lambdas, LENGTH_UNIT_IN_METERS));
-                material.SetVector("_mie_extinction", ScaleToWavelengths(model, model.m_mieExtinction, lambdas, LENGTH_UNIT_IN_METERS));
+                SetDensityProfileShaderUniforms(values.m_rayleighDensity, "_rayleigh_density", material);
+                material.SetVector("_rayleigh_scattering", values.m_rayleighScattering);
+                SetDensityProfileShaderUniforms(values.m_mieDensity, "_mie_density", material);
+                material.SetVector("_mie_scattering", values.m_mieScattering);
+                material.SetVector("_mie_extinction", values.m_mieExtinction);
                 material.SetFloat("_mie_phase_function_g", parameters.miePhaseFunctionG);
-                SetDensityProfileShaderUniforms(model.m_absorptionDensity, "_absorption_density", material);
-                material.SetVector("_absorption_extinction", ScaleToWavelengths(model, model.m_absorptionExtinction, lambdas, LENGTH_UNIT_IN_METERS));
+                SetDensityProfileShaderUniforms(values.m_absorptionDensity, "_absorption_density", material);
+                material.SetVector("_absorption_extinction", values.m_absorptionExtinction);
                 material.SetVector("_ground_albedo", Vector3.one * parameters.groundAlbedo);
                 material.SetFloat("_mu_s_min", Mathf.Cos(parameters.maxSunZenithAngle));
 
                 material.SetVector("sun_size", new Vector3(Mathf.Tan(parameters.sunAngularRadius), Mathf.Cos(parameters.sunAngularRadius), parameters.sunAngularRadius));
-
-                material.SetTexture("_transmittance_texture", model.m_transmittanceLUT);
-                material.SetTexture("_scattering_texture", model.m_scatteringLUT);
-                material.SetTexture("_irradiance_texture", model.m_irradianceLUT);
-            }
-
-            public static void SetShaderUniforms(AtmosphereModel model, AtmosphereParameters parameters, Material material)
-            {
-                SetShaderUniforms(model, parameters, material, LAMBDA_V);
             }
 
             public static void Compute(AtmosphereModel model, AtmosphereParameters parameters)
@@ -418,48 +433,57 @@ namespace PhysicalSky
 #endif
                 float timerStartCompute = Time.realtimeSinceStartup;
 
-                if (SystemInfo.graphicsShaderLevel < 30)
+                if (SystemInfo.graphicsShaderLevel < 50)
                 {
                     string currentLevelString = (SystemInfo.graphicsShaderLevel / 10).ToString() + "." + (SystemInfo.graphicsShaderLevel % 10).ToString();
-                    Debug.LogError("Computing atmospheric lookup textures requires shader model 3.0 or higher! Current is " + currentLevelString);
+                    Debug.LogError("Computing atmospheric lookup textures requires shader model 5.0 or higher! Current is " + currentLevelString);
                     return;
                 }
 
-                model.m_wavelengths.Clear();
-                model.m_solarIrradiance.Clear();
-                model.m_rayleighScattering.Clear();
-                model.m_mieScattering.Clear();
-                model.m_mieExtinction.Clear();
-                model.m_absorptionExtinction.Clear();
+                ComputedValues values;
 
-                model.m_sunSolidAngle = Mathf.PI * Mathf.Pow(parameters.sunAngularRadius, 2);
+                values.m_sunSolidAngle = Mathf.PI * Mathf.Pow(parameters.sunAngularRadius, 2);
+                const int wavelengthStepSize = 10;
+                const int numWavelengthSteps = ((LAMBDA_MAX - LAMBDA_MIN) / wavelengthStepSize) + 1;
 
-                for (int l = LAMBDA_MIN; l <= LAMBDA_MAX; l += 10)
+                float[] wavelengths = new float[numWavelengthSteps];
+                float[] solarIrradiance = new float[numWavelengthSteps];
+                float[] rayleighScattering = new float[numWavelengthSteps];
+                float[] mieScattering = new float[numWavelengthSteps];
+                float[] mieExtinction = new float[numWavelengthSteps];
+                float[] absorptionExtinction = new float[numWavelengthSteps];
+
                 {
-                    float lambda = l * 1e-3f;  // micro-meters
-                    float mie = parameters.mieAngstromBeta / parameters.mieScaleHeight * Mathf.Pow(lambda, -parameters.mieAngstromAlpha);
-                    model.m_wavelengths.Add(l);
+                    int i = 0;
+                    for (int l = LAMBDA_MIN; l <= LAMBDA_MAX; l += wavelengthStepSize)
+                    {
+                        float lambda = l * 1e-3f;  // micro-meters
+                        float mie = parameters.mieAngstromBeta / parameters.mieScaleHeight * Mathf.Pow(lambda, -parameters.mieAngstromAlpha);
+                        wavelengths[i] = l;
 
-                    if (parameters.useConstantSolarSpectrum)
-                        model.m_solarIrradiance.Add(parameters.constantSolarIrradiance);
-                    else
-                        model.m_solarIrradiance.Add(SOLAR_IRRADIANCE[(l - LAMBDA_MIN) / 10]);
+                        if (parameters.useConstantSolarSpectrum)
+                            solarIrradiance[i] = parameters.constantSolarIrradiance;
+                        else
+                            solarIrradiance[i] = SOLAR_IRRADIANCE[(l - LAMBDA_MIN) / 10];
 
-                    model.m_rayleighScattering.Add(parameters.rayleigh * Mathf.Pow(lambda, -4));
-                    model.m_mieScattering.Add(mie * parameters.mieSingleScatteringAlbedo);
-                    model.m_mieExtinction.Add(mie);
-                    model.m_absorptionExtinction.Add(parameters.useOzone ? kMaxOzoneNumberDensity * OZONE_CROSS_SECTION[(l - LAMBDA_MIN) / 10] : 0.0f);
+                        rayleighScattering[i] = parameters.rayleigh * Mathf.Pow(lambda, -4);
+                        mieScattering[i] = mie * parameters.mieSingleScatteringAlbedo;
+                        mieExtinction[i] = mie;
+                        absorptionExtinction[i] = parameters.useOzone ? kMaxOzoneNumberDensity * OZONE_CROSS_SECTION[(l - LAMBDA_MIN) / 10] : 0.0f;
+
+                        i++;
+                    }
                 }
 
-                model.m_rayleighDensity = new DensityProfile(new DensityProfileLayer(0.0f, 1.0f, -1.0f / parameters.rayleighScaleHeight, 0.0f, 0.0f));
-                model.m_mieDensity = new DensityProfile(new DensityProfileLayer(0.0f, 1.0f, -1.0f / parameters.mieScaleHeight, 0.0f, 0.0f));
+                values.m_rayleighDensity = new DensityProfile(new DensityProfileLayer(0.0f, 1.0f, -1.0f / parameters.rayleighScaleHeight, 0.0f, 0.0f));
+                values.m_mieDensity = new DensityProfile(new DensityProfileLayer(0.0f, 1.0f, -1.0f / parameters.mieScaleHeight, 0.0f, 0.0f));
 
                 // Density profile increasing linearly from 0 to 1 between 10 and 25km, and
                 // decreasing linearly from 1 to 0 between 25 and 40km. This is an approximate
                 // profile from http://www.kln.ac.lk/science/Chemistry/Teaching_Resources/
                 // Documents/Introduction%20to%20atmospheric%20chemistry.pdf (page 10).
                 // (ozone density)
-                model.m_absorptionDensity = new DensityProfile(
+                values.m_absorptionDensity = new DensityProfile(
                     new DensityProfileLayer(25000.0f, 0.0f, 0.0f, 1.0f / 15000.0f, -2.0f / 3.0f),
                     new DensityProfileLayer(0.0f, 0.0f, 0.0f, -1.0f / 15000.0f, 8.0f / 3.0f));
 
@@ -474,23 +498,29 @@ namespace PhysicalSky
                 // by MAX_LUMINOUS_EFFICACY instead. This is why, in precomputed illuminance
                 // mode, we set sky_spectral_radiance_to_luminance to MAX_LUMINOUS_EFFICACY.
                 if (precomputeIlluminance)
-                    model.m_sky_k = new Vector3(MAX_LUMINOUS_EFFICACY, MAX_LUMINOUS_EFFICACY, MAX_LUMINOUS_EFFICACY);
+                    values.m_sky_k = new Vector3(MAX_LUMINOUS_EFFICACY, MAX_LUMINOUS_EFFICACY, MAX_LUMINOUS_EFFICACY);
                 else
-                    model.m_sky_k = ComputeSpectralRadianceToLuminanceFactors(model.m_wavelengths, model.m_solarIrradiance, -3 /* lambda_power */);
+                    values.m_sky_k = ComputeSpectralRadianceToLuminanceFactors(wavelengths, solarIrradiance, -3 /* lambda_power */);
 
-                model.m_sun_k = ComputeSpectralRadianceToLuminanceFactors(model.m_wavelengths, model.m_solarIrradiance, 0 /* lambda_power */);
+                values.m_sun_k = ComputeSpectralRadianceToLuminanceFactors(wavelengths, solarIrradiance, 0 /* lambda_power */);
 
                 Material precomputeMaterial = new Material(model.m_PrecomputeShader);
 
                 if (numPrecomputedWavelengths <= 3)
                 {
-                    Vector3 lambdas = new Vector3(LAMBDA_R, LAMBDA_G, LAMBDA_B);
+                    Vector3 lambdas = LAMBDA_V;
+                    values.m_solarIrradiance = ScaleToWavelengths(wavelengths, solarIrradiance, lambdas, 1.0f);
+                    values.m_rayleighScattering = ScaleToWavelengths(wavelengths, rayleighScattering, lambdas, LENGTH_UNIT_IN_METERS);
+                    values.m_mieScattering = ScaleToWavelengths(wavelengths, mieScattering, lambdas, LENGTH_UNIT_IN_METERS);
+                    values.m_mieExtinction = ScaleToWavelengths(wavelengths, mieExtinction, lambdas, LENGTH_UNIT_IN_METERS);
+                    values.m_absorptionExtinction = ScaleToWavelengths(wavelengths, absorptionExtinction, lambdas, LENGTH_UNIT_IN_METERS);
+
                     float[] luminanceFromRadiance = new float[9]{
                     1.0f, 0.0f, 0.0f,
                     0.0f, 1.0f, 0.0f,
                     0.0f, 0.0f, 1.0f};
 
-                    Compute(model, parameters, precomputeMaterial, lambdas, luminanceFromRadiance, false);
+                    ComputeTextures(model, values, parameters, precomputeMaterial, luminanceFromRadiance, false);
                 }
                 else
                 {
@@ -502,6 +532,11 @@ namespace PhysicalSky
                             LAMBDA_MIN + (3 * i + 0.5f) * dlambda,
                             LAMBDA_MIN + (3 * i + 1.5f) * dlambda,
                             LAMBDA_MIN + (3 * i + 2.5f) * dlambda);
+                        values.m_solarIrradiance = ScaleToWavelengths(wavelengths, solarIrradiance, lambdas, 1.0f);
+                        values.m_rayleighScattering = ScaleToWavelengths(wavelengths, rayleighScattering, lambdas, LENGTH_UNIT_IN_METERS);
+                        values.m_mieScattering = ScaleToWavelengths(wavelengths, mieScattering, lambdas, LENGTH_UNIT_IN_METERS);
+                        values.m_mieExtinction = ScaleToWavelengths(wavelengths, mieExtinction, lambdas, LENGTH_UNIT_IN_METERS);
+                        values.m_absorptionExtinction = ScaleToWavelengths(wavelengths, absorptionExtinction, lambdas, LENGTH_UNIT_IN_METERS);
 
                         Func<float, int, float> coeff = (lambda, component) =>
                         {
@@ -525,15 +560,26 @@ namespace PhysicalSky
                         coeff(lambdas[0], 2), coeff(lambdas[1], 2), coeff(lambdas[2], 2)
                     };
 
-                        Compute(model, parameters, precomputeMaterial, lambdas, luminanceFromRadiance, i == 0 ? false : true);
+                        ComputeTextures(model, values, parameters, precomputeMaterial, luminanceFromRadiance, i == 0 ? false : true);
                     }
 
                     // After the above iterations, the transmittance texture contains the
                     // transmittance for the 3 wavelengths used at the last iteration. But we
                     // want the transmittance at kLambdaR, kLambdaG, kLambdaB instead, so we
                     // must recompute it here for these 3 wavelengths:
-                    SetShaderUniforms(model, parameters, precomputeMaterial, LAMBDA_V);
+
+                    values.m_solarIrradiance = ScaleToWavelengths(wavelengths, solarIrradiance, LAMBDA_V, 1.0f);
+                    values.m_rayleighScattering = ScaleToWavelengths(wavelengths, rayleighScattering, LAMBDA_V, LENGTH_UNIT_IN_METERS);
+                    values.m_mieScattering = ScaleToWavelengths(wavelengths, mieScattering, LAMBDA_V, LENGTH_UNIT_IN_METERS);
+                    values.m_mieExtinction = ScaleToWavelengths(wavelengths, mieExtinction, LAMBDA_V, LENGTH_UNIT_IN_METERS);
+                    values.m_absorptionExtinction = ScaleToWavelengths(wavelengths, absorptionExtinction, LAMBDA_V, LENGTH_UNIT_IN_METERS);
+
+                    SetShaderUniforms(values, parameters, precomputeMaterial);
+
                     Utilities.GraphicsHelpers.Blit(model.m_transmittanceLUT, precomputeMaterial, (int)PrecomputePass.ComputeTransmittance);
+
+                    model.m_computedParameters = parameters;
+                    model.m_computedValues = values;
                 }
 
                 float timerEndCompute = Time.realtimeSinceStartup;
@@ -542,7 +588,7 @@ namespace PhysicalSky
 #endif
             }
 
-            private static void Compute(AtmosphereModel model, AtmosphereParameters parameters, Material precomputeMaterial, Vector3 lambdas, float[] luminanceFromRadiance, bool accumulate)
+            private static void ComputeTextures(AtmosphereModel model, ComputedValues values, AtmosphereParameters parameters, Material precomputeMaterial, float[] luminanceFromRadiance, bool accumulate)
             {
                 Debug.Assert(luminanceFromRadiance.Length == 9);
 
@@ -558,7 +604,7 @@ namespace PhysicalSky
                 // and DeltaMultipleScatteringTexture in the same GPU texture.
                 RenderTexture DeltaMultipleScatteringTexture = DeltaRayleighScatteringTexture;
 
-                SetShaderUniforms(model, parameters, precomputeMaterial, lambdas);
+                SetShaderUniforms(values, parameters, precomputeMaterial);
                 precomputeMaterial.SetFloatArray("_luminance_from_radiance", luminanceFromRadiance);
                 precomputeMaterial.SetTexture("transmittance_texture", model.m_transmittanceLUT);
                 precomputeMaterial.SetTexture("single_rayleigh_scattering_texture", DeltaRayleighScatteringTexture);

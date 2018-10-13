@@ -64,27 +64,6 @@ namespace PhysicalSky
             public override int GetHashCode() { return layer0.GetHashCode() ^ layer1.GetHashCode(); }
         }
 
-        // Computed values
-        private float m_sunSolidAngle;
-        Vector3 m_sky_k;
-        Vector3 m_sun_k;
-        private List<float> m_wavelengths = new List<float>();
-        private List<float> m_solarIrradiance = new List<float>();
-        private List<float> m_rayleighScattering = new List<float>();
-        private List<float> m_mieScattering = new List<float>();
-        private List<float> m_mieExtinction = new List<float>();
-        private List<float> m_absorptionExtinction = new List<float>();
-        private DensityProfile m_rayleighDensity;
-        private DensityProfile m_mieDensity;
-        private DensityProfile m_absorptionDensity;
-
-        // Computed textures
-        private RenderTexture m_transmittanceLUT = null;
-        private RenderTexture m_scatteringLUT = null;
-        private RenderTexture m_irradianceLUT = null;
-        
-        public bool NeedsRecompute { get { return (m_computedParameters != m_parameters) || TexturesInvalid(); } }
-
         [SerializeField]
         private AtmosphereParameters m_parameters = AtmosphereParameters.defaultEarth;
         public AtmosphereParameters Parameters
@@ -98,28 +77,48 @@ namespace PhysicalSky
                 }
             }
         }
-        private AtmosphereParameters m_computedParameters;
 
         // Shader and material used for precompute
         [SerializeField]
         private Shader m_PrecomputeShader = null;
         public Shader PrecomputeShader { get { return m_PrecomputeShader; } set { m_PrecomputeShader = value; } }
 
+        // Computed values
+        private AtmosphereParameters m_computedParameters;
+        private Internal.ComputedValues m_computedValues;
+        // Computed textures
+        private RenderTexture m_transmittanceLUT = null;
+        private RenderTexture m_scatteringLUT = null;
+        private RenderTexture m_irradianceLUT = null;
+
+        public bool NeedsRecompute()
+        {
+            return (m_computedParameters != m_parameters) || TexturesInvalid();
+        }
+
         public void SetShaderUniforms(Material m)
         {
-            Internal.SetShaderUniforms(this, m_computedParameters, m);
+            Internal.SetShaderUniforms(this, m);
         }
 
         public bool Compute(bool force = false)
         {
-            if (NeedsRecompute || force)
+            if (NeedsRecompute() || force)
             {
                 AllocateLookupTextures();
                 Internal.Compute(this, m_parameters);
-                m_computedParameters = m_parameters;
                 return true;
             }
             return false;
+        }
+
+        public void ReleaseResources()
+        {
+#if PHYSICAL_SKY_DEBUG
+            Debug.Log("Released Atmosphere Resources");
+#endif
+            ReleaseLookupTextures();
+            m_computedParameters = new AtmosphereParameters();
         }
 
         private void AllocateLookupTextures()
@@ -134,15 +133,6 @@ namespace PhysicalSky
             Internal.TextureFactory.ReleaseRenderTexture(ref m_transmittanceLUT);
             Internal.TextureFactory.ReleaseRenderTexture(ref m_irradianceLUT);
             Internal.TextureFactory.ReleaseRenderTexture(ref m_scatteringLUT);
-        }
-
-        public void ReleaseResources()
-        {
-#if PHYSICAL_SKY_DEBUG
-            Debug.Log("Released Atmosphere Resources");
-#endif
-            ReleaseLookupTextures();
-            m_computedParameters = new AtmosphereParameters();
         }
 
         public bool TexturesInvalid()

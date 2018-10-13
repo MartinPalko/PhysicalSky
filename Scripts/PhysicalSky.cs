@@ -79,7 +79,7 @@ namespace PhysicalSky
 
                 m_StarMeshObject = new GameObject("StarMesh");
 #if PHYSICAL_SKY_DEBUG
-            m_StarMeshObject.hideFlags = HideFlags.DontSave;
+                m_StarMeshObject.hideFlags = HideFlags.DontSave;
 #else
                 m_StarMeshObject.hideFlags = HideFlags.HideAndDontSave;
 #endif
@@ -120,7 +120,7 @@ namespace PhysicalSky
 #if UNITY_EDITOR
             if (!Application.isPlaying)
             {
-                m_SunLight = GetComponent<Light>();                
+                m_SunLight = GetComponent<Light>();
             }
 #endif
 
@@ -130,7 +130,7 @@ namespace PhysicalSky
                 return;
             }
 
-            if (m_Atmosphere.NeedsRecompute)
+            if (m_Atmosphere.NeedsRecompute())
                 m_Atmosphere.Compute();
 
             if (!m_SunRadianceTexture)
