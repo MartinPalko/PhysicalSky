@@ -7,61 +7,17 @@ namespace PhysicalSky
     [CreateAssetMenu(fileName = "NewAtmosphereModel", menuName = "PhysicalSky/AtmosphereModel")]
     public partial class AtmosphereModel : ScriptableObject, IAtmosphereModel
     {
-        // Matches that in PhysicalSkyCommon.cginc
-        public struct DensityProfileLayer
+        [Serializable]
+        private struct ComputedRuntimeValues
         {
-            public float width;
-            public float exp_term;
-            public float exp_scale;
-            public float linear_term;
-            public float constant_term;
-
-            public DensityProfileLayer(float width, float exp_term, float exp_scale, float linear_term, float constant_term)
-            {
-                this.width = width;
-                this.exp_term = exp_term;
-                this.exp_scale = exp_scale;
-                this.linear_term = linear_term;
-                this.constant_term = constant_term;
-            }
-
-            public static bool operator ==(DensityProfileLayer x, DensityProfileLayer y)
-            {
-                return x.width == y.width &&
-                    x.exp_term == y.exp_term &&
-                    x.exp_scale == y.exp_scale &&
-                    x.linear_term == y.linear_term &&
-                    x.constant_term == y.constant_term;
-            }
-            public static bool operator !=(DensityProfileLayer x, DensityProfileLayer y) { return !x.Equals(y); }
-            public override bool Equals(object obj) { return obj is DensityProfileLayer && this == (DensityProfileLayer)obj; }
-            public override int GetHashCode() { return width.GetHashCode() ^ exp_term.GetHashCode() ^ exp_scale.GetHashCode() ^ linear_term.GetHashCode() ^ constant_term.GetHashCode(); }
-        };
-
-        public struct DensityProfile
-        {
-            public DensityProfileLayer layer0;
-            public DensityProfileLayer layer1;
-
-            public DensityProfile(DensityProfileLayer layer0, DensityProfileLayer layer1)
-            {
-                this.layer0 = layer0;
-                this.layer1 = layer1;
-            }
-
-            public DensityProfile(DensityProfileLayer layer)
-            {
-                this.layer0 = layer;
-                this.layer1 = layer;
-            }
-
-            public static bool operator ==(DensityProfile x, DensityProfile y)
-            {
-                return x.layer0 == y.layer0 && x.layer1 == y.layer1;
-            }
-            public static bool operator !=(DensityProfile x, DensityProfile y) { return !x.Equals(y); }
-            public override bool Equals(object obj) { return obj is DensityProfile && this == (DensityProfile)obj; }
-            public override int GetHashCode() { return layer0.GetHashCode() ^ layer1.GetHashCode(); }
+            public float m_sunSolidAngle;
+            public Vector3 m_sky_k;
+            public Vector3 m_sun_k;
+            public Vector3 m_solarIrradiance;
+            public Vector3 m_rayleighScattering;
+            public Vector3 m_mieScattering;
+            public Vector3 m_mieExtinction;
+            public Vector3 m_absorptionExtinction;
         }
 
         [SerializeField]
@@ -85,7 +41,7 @@ namespace PhysicalSky
 
         // Computed values
         private AtmosphereParameters m_computedParameters;
-        private Internal.ComputedValues m_computedValues;
+        private ComputedRuntimeValues m_computedValues;
         // Computed textures
         private RenderTexture m_transmittanceLUT = null;
         private RenderTexture m_scatteringLUT = null;
@@ -96,9 +52,28 @@ namespace PhysicalSky
             return (m_computedParameters != m_parameters) || TexturesInvalid();
         }
 
-        public void SetShaderUniforms(Material m)
+        public void SetShaderUniforms(Material material)
         {
-            Internal.SetShaderUniforms(this, m);
+            // TODO: Set only run-time required values here
+            material.SetTexture("_transmittance_texture", m_transmittanceLUT);
+            material.SetTexture("_scattering_texture", m_scatteringLUT);
+            material.SetTexture("_irradiance_texture", m_irradianceLUT);
+            
+            material.SetVector("_sky_spectral_radiance_to_luminance", m_computedParameters.luminance != AtmosphereParameters.LuminanceType.none ? m_computedValues.m_sky_k : Vector3.one);
+            material.SetVector("_sun_spectral_radiance_to_luminance", m_computedParameters.luminance != AtmosphereParameters.LuminanceType.none ? m_computedValues.m_sun_k : Vector3.one);
+
+            material.SetVector("_solar_irradiance", m_computedValues.m_solarIrradiance);
+            material.SetFloat("_sun_angular_radius", m_computedParameters.sunAngularRadius);
+            material.SetFloat("_bottom_radius", m_computedParameters.planetaryRadius / Prerenderer.LENGTH_UNIT_IN_METERS);
+            material.SetFloat("_top_radius", (m_computedParameters.planetaryRadius + m_computedParameters.atmosphereThickness) / Prerenderer.LENGTH_UNIT_IN_METERS);
+            material.SetVector("_rayleigh_scattering", m_computedValues.m_rayleighScattering);
+            material.SetVector("_mie_scattering", m_computedValues.m_mieScattering);
+            material.SetVector("_mie_extinction", m_computedValues.m_mieExtinction);
+            material.SetFloat("_mie_phase_function_g", m_computedParameters.miePhaseFunctionG);
+            material.SetVector("_absorption_extinction", m_computedValues.m_absorptionExtinction);
+            material.SetFloat("_mu_s_min", Mathf.Cos(m_computedParameters.maxSunZenithAngle));
+
+            material.SetVector("sun_size", new Vector3(Mathf.Tan(m_computedParameters.sunAngularRadius), Mathf.Cos(m_computedParameters.sunAngularRadius), m_computedParameters.sunAngularRadius));
         }
 
         public bool Compute(bool force = false)
@@ -106,8 +81,17 @@ namespace PhysicalSky
             if (NeedsRecompute() || force)
             {
                 AllocateLookupTextures();
-                Internal.Compute(this, m_parameters);
-                return true;
+                Prerenderer preRenderer = new PrerendererBlit(m_PrecomputeShader);
+
+                if (preRenderer.Compute(m_parameters, m_transmittanceLUT, m_scatteringLUT, m_irradianceLUT, ref m_computedValues))
+                {
+                    m_computedParameters = m_parameters;
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
             }
             return false;
         }
@@ -123,16 +107,16 @@ namespace PhysicalSky
 
         private void AllocateLookupTextures()
         {
-            Internal.TextureFactory.CreateRenderTexture(ref m_transmittanceLUT, Internal.TextureFactory.Preset.Transmittance);
-            Internal.TextureFactory.CreateRenderTexture(ref m_irradianceLUT, Internal.TextureFactory.Preset.Irradiance);
-            Internal.TextureFactory.CreateRenderTexture(ref m_scatteringLUT, Internal.TextureFactory.Preset.Scattering);
+            TextureFactory.CreateRenderTexture(ref m_transmittanceLUT, TextureFactory.Preset.Transmittance);
+            TextureFactory.CreateRenderTexture(ref m_irradianceLUT, TextureFactory.Preset.Irradiance);
+            TextureFactory.CreateRenderTexture(ref m_scatteringLUT, TextureFactory.Preset.Scattering);
         }
 
         private void ReleaseLookupTextures()
         {
-            Internal.TextureFactory.ReleaseRenderTexture(ref m_transmittanceLUT);
-            Internal.TextureFactory.ReleaseRenderTexture(ref m_irradianceLUT);
-            Internal.TextureFactory.ReleaseRenderTexture(ref m_scatteringLUT);
+            TextureFactory.ReleaseRenderTexture(ref m_transmittanceLUT);
+            TextureFactory.ReleaseRenderTexture(ref m_irradianceLUT);
+            TextureFactory.ReleaseRenderTexture(ref m_scatteringLUT);
         }
 
         public bool TexturesInvalid()
