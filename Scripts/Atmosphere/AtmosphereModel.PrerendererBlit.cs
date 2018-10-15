@@ -76,7 +76,6 @@ namespace PhysicalSky
             {
                 // Compute Transmittance LUT.
                 Utilities.GraphicsHelpers.Blit3D(m_transmittanceLUT, m_material, (int)PrecomputePass.ComputeTransmittance);
-                Utilities.GraphicsHelpers.DumpTexture(m_transmittanceLUT, "C:\\debug\\m_transmittanceLUT");
             }
 
             protected override void RenderSingleScattering(bool accumulate)
