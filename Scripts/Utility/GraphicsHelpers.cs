@@ -1,25 +1,10 @@
-﻿
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace PhysicalSky.Utilities
 {
 	public class GraphicsHelpers : MonoBehaviour
 	{
-        public static void Blit(RenderTexture dest, Material mat, int pass)
-		{
-			Graphics.Blit(null, dest, mat, pass);
-		}
-
-		public static void BlitWithDummy(Material mat, int pass, int width, int height)
-		{
-			RenderTexture dummy = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.R8);
-			Blit(dummy, mat, pass);
-			RenderTexture.ReleaseTemporary(dummy);
-		}
-
-        public static void Blit3D(RenderTargetSetup rtSetup, int depthSlices, Material mat, int pass)
+        private static void Blit3D(RenderTargetSetup rtSetup, int depthSlices, Material mat, int pass)
         {
             GL.PushMatrix();
             GL.LoadOrtho();
