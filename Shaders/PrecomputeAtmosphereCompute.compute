@@ -1,0 +1,152 @@
+﻿
+#include "UnityCG.cginc"
+#include "PhysicalSkyCommon.cginc"
+
+uniform float4 _luminance_from_radiance[3];
+float3 LuminanceFromRadiance(float3 v)
+{
+	float3x3 luminance_from_radiance = {_luminance_from_radiance[0].xyz, _luminance_from_radiance[1].xyz, _luminance_from_radiance[2].xyz};
+	return mul(luminance_from_radiance, v);
+}
+
+uniform TransmittanceTexture transmittance_texture;
+uniform ScatteringTexture single_rayleigh_scattering_texture;
+uniform ScatteringTexture single_mie_scattering_texture;
+uniform ScatteringTexture multiple_scattering_texture;
+uniform ScatteringDensityTexture scattering_density_texture;
+uniform IrradianceTexture irradiance_texture;
+uniform int scattering_order;
+
+#pragma kernel ComputeTransmittance MAIN=ComputeTransmittance COMPUTE_TRANSMITTANCE
+#if COMPUTE_TRANSMITTANCE
+
+	RWTexture2D<float3> Result0;
+
+	[numthreads(8,8,1)]
+	void MAIN(uint3 id : SV_DispatchThreadID)
+	{
+		AtmosphereParameters params = GetAtmosphereParameters();
+
+		Result0[id.xy] = ComputeTransmittanceToTopAtmosphereBoundaryTexture(params, id.xy + 0.5);
+	}
+#endif
+
+#pragma kernel ComputeDirectIrradiance MAIN=ComputeDirectIrradiance COMPUTE_DIRECT_IRRADIANCE
+#pragma kernel ComputeDirectIrradiance_Accumulate MAIN=ComputeDirectIrradiance_Accumulate COMPUTE_DIRECT_IRRADIANCE ACCUMULATE
+#if COMPUTE_DIRECT_IRRADIANCE
+
+	RWTexture2D<float3> Result0;
+#ifndef ACCUMULATE
+	RWTexture2D<float3> Result1;
+#endif
+
+	[numthreads(8,8,1)]
+	void MAIN(uint3 id : SV_DispatchThreadID)
+	{
+		AtmosphereParameters params = GetAtmosphereParameters();
+
+		Result0[id.xy] = ComputeDirectIrradianceTexture(params, transmittance_texture, id.xy + 0.5);
+#ifndef ACCUMULATE
+		Result1[id.xy] =  float3(0, 0, 0);
+#endif
+	}
+#endif
+
+#pragma kernel ComputeSingleScattering MAIN=ComputeSingleScattering COMPUTE_SINGLE_SCATTERING
+#pragma kernel ComputeSingleScattering_Accumulate MAIN=ComputeSingleScattering_Accumulate COMPUTE_SINGLE_SCATTERING ACCUMULATE
+#if COMPUTE_SINGLE_SCATTERING
+
+	RWTexture3D<float3> Result0;
+	RWTexture3D<float3> Result1;
+	RWTexture3D<float4> Result2;
+
+	[numthreads(8,8,1)]
+	void MAIN(uint3 id : SV_DispatchThreadID)
+	{
+		AtmosphereParameters params = GetAtmosphereParameters();
+
+		float3 outRayleigh;
+		float3 outMie;
+
+		ComputeSingleScatteringTexture(params, transmittance_texture, id + 0.5, outRayleigh, outMie);
+
+		Result0[id] = outRayleigh;
+		Result1[id] = outMie;
+
+#ifdef ACCUMULATE
+		Result2[id] += float4(LuminanceFromRadiance(outRayleigh), LuminanceFromRadiance(outMie).r);
+#else
+		Result2[id] = float4(LuminanceFromRadiance(outRayleigh), LuminanceFromRadiance(outMie).r);
+#endif
+	}
+#endif
+
+#pragma kernel ComputeScatteringDensity MAIN=ComputeScatteringDensity COMPUTE_SCATTERING_DENSITY
+#if COMPUTE_SCATTERING_DENSITY
+
+	RWTexture3D<float3> Result0;
+
+	[numthreads(8,8,1)]
+	void MAIN(uint3 id : SV_DispatchThreadID)
+	{
+		AtmosphereParameters params = GetAtmosphereParameters();
+
+		Result0[id] = ComputeScatteringDensityTexture(
+			params,
+			transmittance_texture,
+			single_rayleigh_scattering_texture,
+			single_mie_scattering_texture,
+			multiple_scattering_texture,
+			irradiance_texture,
+			id + 0.5,
+			scattering_order);
+	}
+#endif
+
+#pragma kernel ComputeIndirectIrradiance MAIN=ComputeIndirectIrradiance COMPUTE_INDIRECT_IRRADIANCE
+#if COMPUTE_INDIRECT_IRRADIANCE
+
+	RWTexture2D<float3> Result0;
+	RWTexture2D<float3> Result1;
+
+	[numthreads(8,8,1)]
+	void MAIN(uint3 id : SV_DispatchThreadID)
+	{
+		AtmosphereParameters params = GetAtmosphereParameters();
+
+		 float3 irradianceResult = ComputeIndirectIrradianceTexture(
+			params,
+			single_rayleigh_scattering_texture,
+			single_mie_scattering_texture,
+			multiple_scattering_texture,
+			id.xy + 0.5,
+			scattering_order);
+
+		 Result0[id.xy] = irradianceResult;
+		 Result1[id.xy] += LuminanceFromRadiance(irradianceResult);
+	}
+#endif
+
+#pragma kernel ComputeMultipleScattering MAIN=ComputeMultipleScattering COMPUTE_MULTIPLE_SCATTERING
+#if COMPUTE_MULTIPLE_SCATTERING
+
+	RWTexture3D<float3> Result0;
+	RWTexture3D<float4> Result1;
+
+	[numthreads(8,8,1)]
+	void MAIN(uint3 id : SV_DispatchThreadID)
+	{
+		AtmosphereParameters params = GetAtmosphereParameters();
+
+		float nu;
+		float3 deltaMultipleScatteringResult = ComputeMultipleScatteringTexture(
+			params,
+			transmittance_texture,
+			scattering_density_texture,
+			id + 0.5,
+			nu);
+
+		Result0[id] = deltaMultipleScatteringResult;
+		Result1[id] += float4(LuminanceFromRadiance(deltaMultipleScatteringResult) / RayleighPhaseFunction(nu), 0);
+	}
+#endif

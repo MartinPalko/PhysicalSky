@@ -38,16 +38,6 @@ namespace PhysicalSky
                 public static bool operator !=(DensityProfileLayer x, DensityProfileLayer y) { return !x.Equals(y); }
                 public override bool Equals(object obj) { return obj is DensityProfileLayer && this == (DensityProfileLayer)obj; }
                 public override int GetHashCode() { return width.GetHashCode() ^ exp_term.GetHashCode() ^ exp_scale.GetHashCode() ^ linear_term.GetHashCode() ^ constant_term.GetHashCode(); }
-
-                public float[] GetShaderValues()
-                {
-                    return new float[5] {
-                    width / LENGTH_UNIT_IN_METERS,
-                    exp_term,
-                    exp_scale * LENGTH_UNIT_IN_METERS,
-                    linear_term * LENGTH_UNIT_IN_METERS,
-                    constant_term};
-                }
             };
 
             protected struct DensityProfile
@@ -74,6 +64,26 @@ namespace PhysicalSky
                 public static bool operator !=(DensityProfile x, DensityProfile y) { return !x.Equals(y); }
                 public override bool Equals(object obj) { return obj is DensityProfile && this == (DensityProfile)obj; }
                 public override int GetHashCode() { return layer0.GetHashCode() ^ layer1.GetHashCode(); }
+
+                public Vector4[] GetShaderValues()
+                {
+                    return new Vector4[3] {
+                        new Vector4(
+                            layer0.width / LENGTH_UNIT_IN_METERS,
+                            layer0.exp_term,
+                            layer0.exp_scale * LENGTH_UNIT_IN_METERS,
+                            layer0.linear_term * LENGTH_UNIT_IN_METERS),
+                        new Vector4(
+                            layer0.constant_term,
+                            layer1.width / LENGTH_UNIT_IN_METERS,
+                            layer1.exp_term,
+                            layer1.exp_scale * LENGTH_UNIT_IN_METERS),
+                        new Vector4(
+                            layer1.linear_term * LENGTH_UNIT_IN_METERS,
+                            layer1.constant_term,
+                            0,
+                            0)};
+                }
             }
 
             protected AtmosphereParameters m_parameters;
@@ -133,6 +143,13 @@ namespace PhysicalSky
                         m.b.x, m.b.y, m.b.z,
                         m.c.x, m.c.y, m.c.z};
                 }
+                public static implicit operator Vector4[] (Matrix3x3 m)
+                {
+                    return new Vector4[3] {
+                        new Vector4(m.a.x, m.a.y, m.a.z, 0),
+                        new Vector4(m.b.x, m.b.y, m.b.z, 0),
+                        new Vector4( m.c.x, m.c.y, m.c.z, 0)};
+                }
 
                 public static Matrix3x3 identity
                 {
@@ -147,7 +164,6 @@ namespace PhysicalSky
             }
 
             // Abstract functions
-            public abstract bool Supported();
             protected abstract void RenderTransmittanceLUT();
             protected abstract void SetupPrerender(Vector3 lamdas, Matrix3x3 luminanceFromRadiance);
             protected abstract void CleanupPrerenderer();

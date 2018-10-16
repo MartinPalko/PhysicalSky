@@ -44,7 +44,7 @@
 				float4 irradiance_lut : COLOR1;
 			};
 
-			f2a frag (v2f_img i) : COLOR
+			f2a frag (v2f_img i)
 			{
 				AtmosphereParameters params = GetAtmosphereParameters();
 

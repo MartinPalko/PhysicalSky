@@ -68,6 +68,7 @@ namespace PhysicalSky
                         throw new System.NotImplementedException();
                 }
 
+                desc.enableRandomWrite = true;
                 desc.useMipMap = false;
                 desc.sRGB = false;
                 desc.colorFormat = RenderTextureFormat.ARGBFloat; // TODO: Try changing to half or float
@@ -99,16 +100,21 @@ namespace PhysicalSky
 
             public static RenderTexture CreateTempRenderTexture(Preset preset)
             {
-                RenderTexture tex = RenderTexture.GetTemporary(GetTextureDescriptor(preset));
-                tex.wrapMode = TextureWrapMode.Clamp;
-                tex.filterMode = GetFilterMode(preset);
+                RenderTexture tex = null;
+                CreateRenderTexture(ref tex, preset);
                 return tex;
+                // TODO: Investigate why temporary textures can not be written to from compute shaders.
+                //RenderTexture tex = RenderTexture.GetTemporary(GetTextureDescriptor(preset));
+                //tex.wrapMode = TextureWrapMode.Clamp;
+                //tex.filterMode = GetFilterMode(preset);
+                //return tex;
             }
 
             public static void ReleaseTempRenderTexture(ref RenderTexture tex)
             {
-                RenderTexture.ReleaseTemporary(tex);
-                tex = null;
+                ReleaseRenderTexture(ref tex);
+                //RenderTexture.ReleaseTemporary(tex);
+                //tex = null;
             }
         }
     }

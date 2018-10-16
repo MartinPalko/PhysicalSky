@@ -7,21 +7,21 @@ namespace PhysicalSky
 {
     public partial class AtmosphereModel
     {
-        private enum PrecomputePass
-        {
-            ComputeTransmittance = 0,
-            ComputeDirectIrradiance = 1,
-            ComputeSingleScattering = 2,
-            AccumulateSingleScattering = 3,
-            ComputeScatteringDensity = 4,
-            ComputeIndirectIrradiance = 5,
-            AccumulateIndirectIrradiance = 6,
-            ComputeMultipleScattering = 7,
-            AccumulateMultipleScattering = 8
-        }
-
         private sealed class PrerendererBlit : Prerenderer
         {
+            private enum PrecomputePass
+            {
+                ComputeTransmittance = 0,
+                ComputeDirectIrradiance = 1,
+                ComputeSingleScattering = 2,
+                AccumulateSingleScattering = 3,
+                ComputeScatteringDensity = 4,
+                ComputeIndirectIrradiance = 5,
+                AccumulateIndirectIrradiance = 6,
+                ComputeMultipleScattering = 7,
+                AccumulateMultipleScattering = 8
+            }
+
             Material m_material;
 
             public PrerendererBlit(Shader shader) : base()
@@ -29,21 +29,21 @@ namespace PhysicalSky
                 m_material = new Material(shader);
             }
 
-            public override bool Supported()
+            public static bool Supported()
             {
                 return SystemInfo.graphicsShaderLevel >= 50;
             }
 
             protected override void SetupPrerender(Vector3 lambdas, Matrix3x3 luminanceFromRadiance)
             {
-                m_material.SetFloatArray("_luminance_from_radiance", luminanceFromRadiance);
-
                 m_material.SetTexture("transmittance_texture", m_transmittanceLUT);
                 m_material.SetTexture("single_rayleigh_scattering_texture", m_tempTextures.DeltaRayleighScatteringTexture);
                 m_material.SetTexture("single_mie_scattering_texture", m_tempTextures.DeltaMieScatteringTexture);
                 m_material.SetTexture("multiple_scattering_texture", m_tempTextures.DeltaMultipleScatteringTexture);
                 m_material.SetTexture("irradiance_texture", m_tempTextures.DeltaIrradianceTexture);
                 m_material.SetTexture("scattering_density_texture", m_tempTextures.DeltaScatteringDensityTexture);
+
+                m_material.SetFloatArray("_luminance_from_radiance", luminanceFromRadiance);
 
                 m_material.SetVector("_sky_spectral_radiance_to_luminance", m_parameters.luminance != AtmosphereParameters.LuminanceType.none ? m_sky_k : Vector3.one);
                 m_material.SetVector("_sun_spectral_radiance_to_luminance", m_parameters.luminance != AtmosphereParameters.LuminanceType.none ? m_sun_k : Vector3.one);
@@ -52,16 +52,13 @@ namespace PhysicalSky
                 m_material.SetFloat("_sun_angular_radius", m_parameters.sunAngularRadius);
                 m_material.SetFloat("_bottom_radius", m_parameters.planetaryRadius / LENGTH_UNIT_IN_METERS);
                 m_material.SetFloat("_top_radius", (m_parameters.planetaryRadius + m_parameters.atmosphereThickness) / LENGTH_UNIT_IN_METERS);
-                m_material.SetFloatArray("_rayleigh_density0", m_rayleighDensity.layer0.GetShaderValues());
-                m_material.SetFloatArray("_rayleigh_density1", m_rayleighDensity.layer1.GetShaderValues());
+                m_material.SetVectorArray("_rayleigh_density", m_rayleighDensity.GetShaderValues());
                 m_material.SetVector("_rayleigh_scattering", ScaleToWavelengths(m_rayleighScattering, lambdas, LENGTH_UNIT_IN_METERS));
-                m_material.SetFloatArray("_mie_density0", m_mieDensity.layer0.GetShaderValues());
-                m_material.SetFloatArray("_mie_density1", m_mieDensity.layer1.GetShaderValues());
+                m_material.SetVectorArray("_mie_density", m_mieDensity.GetShaderValues());
                 m_material.SetVector("_mie_scattering", ScaleToWavelengths(m_mieScattering, lambdas, LENGTH_UNIT_IN_METERS));
                 m_material.SetVector("_mie_extinction", ScaleToWavelengths(m_mieExtinction, lambdas, LENGTH_UNIT_IN_METERS));
                 m_material.SetFloat("_mie_phase_function_g", m_parameters.miePhaseFunctionG);
-                m_material.SetFloatArray("_absorption_density0", m_absorptionDensity.layer0.GetShaderValues());
-                m_material.SetFloatArray("_absorption_density1", m_absorptionDensity.layer1.GetShaderValues());
+                m_material.SetVectorArray("_absorption_density", m_absorptionDensity.GetShaderValues());
                 m_material.SetVector("_absorption_extinction", ScaleToWavelengths(m_absorptionExtinction, lambdas, LENGTH_UNIT_IN_METERS));
                 m_material.SetVector("_ground_albedo", Vector3.one * m_parameters.groundAlbedo);
                 m_material.SetFloat("_mu_s_min", Mathf.Cos(m_parameters.maxSunZenithAngle));
