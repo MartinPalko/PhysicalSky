@@ -22,11 +22,11 @@ namespace PhysicalSky
                 AccumulateMultipleScattering = 8
             }
 
-            Material m_material;
+            Material m_material = null;
 
-            public PrerendererBlit(Shader shader) : base()
+            public PrerendererBlit() : base()
             {
-                m_material = new Material(shader);
+                m_material = new Material(PhysicalSkyProjectSettings.PrerenderBlitShader);
             }
 
             public static bool Supported()

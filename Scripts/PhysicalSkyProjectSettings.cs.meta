@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 40efb6cca6008854a90717a101a864b1
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - m_prerenderBlitShader: {fileID: 4800000, guid: c3812fd1f0a67c140b33e41c8f9d4b81,
+      type: 3}
+  - m_prerenderComputeShader: {fileID: 7200000, guid: 75a535db177dca04f8e433bb3f85ca4f,
+      type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

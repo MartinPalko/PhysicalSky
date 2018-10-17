@@ -34,12 +34,6 @@ namespace PhysicalSky
             }
         }
 
-        // Shader and material used for precompute
-        [SerializeField]
-        private Shader m_prerenderShaderBlit = null;
-        [SerializeField]
-        private ComputeShader m_prerenderShaderCompute = null;
-
         // Computed values
         private AtmosphereParameters m_computedParameters;
         private ComputedRuntimeValues m_computedValues;
@@ -86,9 +80,9 @@ namespace PhysicalSky
                 Prerenderer preRenderer;
 
                 if (PrerendererCompute.Supported())
-                    preRenderer = new PrerendererCompute(m_prerenderShaderCompute);
+                    preRenderer = new PrerendererCompute();
                 else if (PrerendererBlit.Supported())
-                    preRenderer = new PrerendererBlit(m_prerenderShaderBlit);
+                    preRenderer = new PrerendererBlit();
                 else
                 {
                     Debug.LogError("No atmosphere model pre-renderer is supported on the current platform. Cannot compute lookup textures!");

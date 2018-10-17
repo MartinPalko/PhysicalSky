@@ -23,11 +23,11 @@ namespace PhysicalSky
                 count
             }
 
-            ComputeShader m_computeShader;
+            ComputeShader m_computeShader = null;
 
-            public PrerendererCompute(ComputeShader computeShader) : base()
+            public PrerendererCompute() : base()
             {
-                m_computeShader = computeShader;
+                m_computeShader = PhysicalSkyProjectSettings.PrerenderComputeShader;
             }
 
             public static bool Supported()
