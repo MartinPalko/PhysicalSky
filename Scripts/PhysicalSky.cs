@@ -1,5 +1,7 @@
 ﻿using UnityEngine;
 
+using PhysicalSky.Utilities;
+
 namespace PhysicalSky
 {
     [ExecuteInEditMode]
@@ -109,10 +111,30 @@ namespace PhysicalSky
             }
         }
 
-        private void ConfigureMaterial(Material m)
+        private void SetShaderUniforms(GraphicsHelpers.IMaterialProperties m)
         {
-            m_Atmosphere.SetShaderUniforms(m);
+            m.SetVector("sun_direction", -transform.forward);
+
+            m.SetFloat("sky_exposure", SkyExposure);
+
+            // TEMP/HACK: When using luminance, values are much brighter than radiance.
+            // Need a better solution to handle that.
+            float luminanceCompensation = m_Atmosphere.Parameters.luminance != AtmosphereParameters.LuminanceType.none ? 1e-05f : 1.0f;
+            m.SetFloat("sun_brightness", SunBrightnessMultiplier * luminanceCompensation);
+
             m.SetVector("camera", new Vector3(0, (m_Atmosphere.Parameters.planetaryRadius / 1000) + m_Altitude, 0));
+        }
+
+        public void SetShaderUniforms(Material material)
+        {
+            m_Atmosphere.SetShaderUniforms(material);
+            SetShaderUniforms(material.ToMaterialPropertyInterface());
+        }
+
+        public void SetShaderUniforms(MaterialPropertyBlock materialPropertyBlock)
+        {
+            m_Atmosphere.SetShaderUniforms(materialPropertyBlock);
+            SetShaderUniforms(materialPropertyBlock.ToMaterialPropertyInterface());
         }
 
         private void LateUpdate()
@@ -141,9 +163,8 @@ namespace PhysicalSky
             // Compute sun radiance, and apply to light
             if (m_SunRadianceMaterial)
             {
-                ConfigureMaterial(m_SunRadianceMaterial);
+                SetShaderUniforms(m_SunRadianceMaterial);
                 m_SunRadianceMaterial.SetMatrix("sun_rotation_matrix", transform.localToWorldMatrix);
-                m_SunRadianceMaterial.SetVector("sun_direction", -transform.forward);
 
                 RenderTexture temporary = RenderTexture.GetTemporary(SUN_RADIANCE_TEXTURE_SIZE, SUN_RADIANCE_TEXTURE_SIZE, 0, RenderTextureFormat.ARGBHalf);
                 RenderTexture.active = temporary;
@@ -178,13 +199,8 @@ namespace PhysicalSky
             // Assign sky material as skybox.
             if (m_SkyMaterial)
             {
-                ConfigureMaterial(m_SkyMaterial);
-                m_SkyMaterial.SetFloat("sky_exposure", SkyExposure);
-
-                // TEMP/HACK: When using luminance, values are much brighter than radiance.
-                // Need a better solution to handle that.
-                float luminanceCompensation = m_Atmosphere.Parameters.luminance != AtmosphereParameters.LuminanceType.none ? 1e-05f : 1.0f;
-                m_SkyMaterial.SetFloat("sun_brightness", SunBrightnessMultiplier * luminanceCompensation);
+                SetShaderUniforms(m_SkyMaterial);
+                
 
                 if (m_StarMap)
                 {
@@ -205,7 +221,7 @@ namespace PhysicalSky
 
             if (m_StarMeshMaterial)
             {
-                ConfigureMaterial(m_StarMeshMaterial);
+                SetShaderUniforms(m_StarMeshMaterial);
 
                 m_StarMeshMaterial.SetFloat("star_intensity_multiplier", m_StarBrightnessMultiplier * SkyExposure);
                 m_StarMeshMaterial.SetFloat("star_intensity_power", m_StarBrightnessPower);
