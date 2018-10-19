@@ -2,6 +2,8 @@
 using UnityEngine;
 using System;
 
+using PhysicalSky.Utilities;
+
 namespace PhysicalSky
 {
     [CreateAssetMenu(fileName = "NewAtmosphereModel", menuName = "PhysicalSky/AtmosphereModel")]
@@ -47,28 +49,35 @@ namespace PhysicalSky
             return (m_computedParameters != m_parameters) || TexturesInvalid();
         }
 
-        public void SetShaderUniforms(Material material)
+        private void SetShaderUniforms(GraphicsHelpers.IMaterialProperties m)
         {
             // TODO: Set only run-time required values here
-            material.SetTexture("_transmittance_texture", m_transmittanceLUT);
-            material.SetTexture("_scattering_texture", m_scatteringLUT);
-            material.SetTexture("_irradiance_texture", m_irradianceLUT);
-            
-            material.SetVector("_sky_spectral_radiance_to_luminance", m_computedParameters.luminance != AtmosphereParameters.LuminanceType.none ? m_computedValues.m_sky_k : Vector3.one);
-            material.SetVector("_sun_spectral_radiance_to_luminance", m_computedParameters.luminance != AtmosphereParameters.LuminanceType.none ? m_computedValues.m_sun_k : Vector3.one);
+            m.SetTexture("_transmittance_texture", m_transmittanceLUT);
+            m.SetTexture("_scattering_texture", m_scatteringLUT);
+            m.SetTexture("_irradiance_texture", m_irradianceLUT);
+            m.SetVector("_sky_spectral_radiance_to_luminance", m_computedParameters.luminance != AtmosphereParameters.LuminanceType.none ? m_computedValues.m_sky_k : Vector3.one);
+            m.SetVector("_sun_spectral_radiance_to_luminance", m_computedParameters.luminance != AtmosphereParameters.LuminanceType.none ? m_computedValues.m_sun_k : Vector3.one);
+            m.SetVector("_solar_irradiance", m_computedValues.m_solarIrradiance);
+            m.SetFloat("_sun_angular_radius", m_computedParameters.sunAngularRadius);
+            m.SetFloat("_bottom_radius", m_computedParameters.planetaryRadius / Prerenderer.LENGTH_UNIT_IN_METERS);
+            m.SetFloat("_top_radius", (m_computedParameters.planetaryRadius + m_computedParameters.atmosphereThickness) / Prerenderer.LENGTH_UNIT_IN_METERS);
+            m.SetVector("_rayleigh_scattering", m_computedValues.m_rayleighScattering);
+            m.SetVector("_mie_scattering", m_computedValues.m_mieScattering);
+            m.SetVector("_mie_extinction", m_computedValues.m_mieExtinction);
+            m.SetFloat("_mie_phase_function_g", m_computedParameters.miePhaseFunctionG);
+            m.SetVector("_absorption_extinction", m_computedValues.m_absorptionExtinction);
+            m.SetFloat("_mu_s_min", Mathf.Cos(m_computedParameters.maxSunZenithAngle));
+            m.SetVector("sun_size", new Vector3(Mathf.Tan(m_computedParameters.sunAngularRadius), Mathf.Cos(m_computedParameters.sunAngularRadius), m_computedParameters.sunAngularRadius));
+        }
 
-            material.SetVector("_solar_irradiance", m_computedValues.m_solarIrradiance);
-            material.SetFloat("_sun_angular_radius", m_computedParameters.sunAngularRadius);
-            material.SetFloat("_bottom_radius", m_computedParameters.planetaryRadius / Prerenderer.LENGTH_UNIT_IN_METERS);
-            material.SetFloat("_top_radius", (m_computedParameters.planetaryRadius + m_computedParameters.atmosphereThickness) / Prerenderer.LENGTH_UNIT_IN_METERS);
-            material.SetVector("_rayleigh_scattering", m_computedValues.m_rayleighScattering);
-            material.SetVector("_mie_scattering", m_computedValues.m_mieScattering);
-            material.SetVector("_mie_extinction", m_computedValues.m_mieExtinction);
-            material.SetFloat("_mie_phase_function_g", m_computedParameters.miePhaseFunctionG);
-            material.SetVector("_absorption_extinction", m_computedValues.m_absorptionExtinction);
-            material.SetFloat("_mu_s_min", Mathf.Cos(m_computedParameters.maxSunZenithAngle));
+        public void SetShaderUniforms(Material material)
+        {
+            SetShaderUniforms(material.ToMaterialPropertyInterface());
+        }
 
-            material.SetVector("sun_size", new Vector3(Mathf.Tan(m_computedParameters.sunAngularRadius), Mathf.Cos(m_computedParameters.sunAngularRadius), m_computedParameters.sunAngularRadius));
+        public void SetShaderUniforms(MaterialPropertyBlock propertyBlock)
+        {
+            SetShaderUniforms(propertyBlock.ToMaterialPropertyInterface());
         }
 
         public bool Compute(bool force = false)
