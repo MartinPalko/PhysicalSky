@@ -147,7 +147,9 @@ static const SolidAngle sr = 1.0;	// Steradian
 static const Power watt = 1.0; // Watt
 static const LuminousPower lm = 1.0; // Lumen
 
-static const float PI = 3.1415926535897932386;
+#ifndef PI
+#define PI 3.1415926535897932386
+#endif
 
 static const Length km = 1000.0;
 static const Area m2 = 1.0;
@@ -559,7 +561,7 @@ InverseSolidAngle RayleighPhaseFunction(Number nu)
 InverseSolidAngle MiePhaseFunction(Number g, Number nu) 
 {
 	InverseSolidAngle k = 3.0 / (8.0 * PI * sr) * (1.0 - g * g) / (2.0 + g * g);
-	return k * (1.0 + nu * nu) / pow(1.0 + g * g - 2.0 * g * nu, 1.5);
+	return k * (1.0 + nu * nu) / pow(abs(1.0 + g * g - 2.0 * g * nu), 1.5);
 }
 
 float4 GetScatteringTextureUvwzFromRMuMuSNu(in AtmosphereParameters atmosphere, Length r, Number mu, Number mu_s, Number nu, bool ray_r_mu_intersects_ground) 
