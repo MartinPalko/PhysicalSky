@@ -44,9 +44,15 @@ namespace PhysicalSky
         private RenderTexture m_scatteringLUT = null;
         private RenderTexture m_irradianceLUT = null;
 
+        public bool HasComputedData()
+        {
+            return !TexturesInvalid() && m_computedParameters != new AtmosphereParameters();
+        }
+
         public bool NeedsRecompute()
         {
-            return (m_computedParameters != m_parameters) || TexturesInvalid();
+            return (m_computedParameters != m_parameters) || !HasComputedData();
+
         }
 
         private void SetShaderUniforms(GraphicsHelpers.IMaterialProperties m)
