@@ -27,13 +27,13 @@ float3 GetSkyLuminance(
 }
 
 float3 GetSkyLuminanceToPoint(
-	Position camera, Position p, Length shadow_length,
+	Position camera, Direction pointDirection, Length pointDistance, Length shadow_length,
 	Direction sun_direction, out DimensionlessSpectrum transmittance)
 {
 	AtmosphereParameters params = GetAtmosphereParameters();
 	return GetSkyRadianceToPoint(params, _transmittance_texture,
 		_scattering_texture,
-		camera, p, shadow_length, sun_direction, transmittance) *
+		camera, pointDirection, pointDistance, shadow_length, sun_direction, transmittance) *
 		params.sky_spectral_radiance_to_luminance;
 }
 
