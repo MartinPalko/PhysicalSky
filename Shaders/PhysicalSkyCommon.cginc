@@ -58,8 +58,7 @@
 #ifndef PHYSICAL_SKY_COMMON
 #define PHYSICAL_SKY_COMMON
 
-//#define NO_TEXTURE3D // Todo: define based on platform
-
+#define NO_TEXTURE3D // Always enabled for now, since texture3d support in Unity is spotty.
 
 #define TRANSMITTANCE_TEXTURE_WIDTH 256
 #define TRANSMITTANCE_TEXTURE_HEIGHT 64
@@ -249,7 +248,7 @@ struct AtmosphereParameters
 
 float4 scatteringTextureSample(ScatteringTexture s, float3 uvw)
 {
-#ifdef NO_TEXTURE3D // TO FIGURE
+#ifdef NO_TEXTURE3D
 	float tex_coord_z = uvw.z * Number(SCATTERING_TEXTURE_R_SIZE - 1);
 	float tex_z = floor(tex_coord_z);
 	float l = tex_coord_z - tex_z;

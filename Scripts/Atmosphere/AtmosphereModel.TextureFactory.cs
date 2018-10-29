@@ -34,7 +34,7 @@ namespace PhysicalSky
 
             public static bool Supports3DTextures()
             {
-                return true;
+                return false; // Always false for now, since there is no clean way of converting a RenderTexture to a Texture3D for serialization.
             }
 
             private static FilterMode GetFilterMode(Preset preset)
@@ -58,11 +58,9 @@ namespace PhysicalSky
                         break;
                     case Preset.Scattering:
                         desc = new RenderTextureDescriptor(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT);
+                        desc.volumeDepth = SCATTERING_TEXTURE_DEPTH;
                         if (Supports3DTextures())
-                        {
                             desc.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
-                            desc.volumeDepth = SCATTERING_TEXTURE_DEPTH;
-                        }
                         break;
                     default:
                         throw new System.NotImplementedException();
