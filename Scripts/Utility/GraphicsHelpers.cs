@@ -73,11 +73,13 @@ namespace PhysicalSky.Utilities
                     rt.height,
                     TextureFormatFromRenderTextureFormat(rt.format),
                     rt.useMipMap);
-
-            Graphics.SetRenderTarget(rt);
-            result.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0, false);
             result.wrapMode = rt.wrapMode;
             result.filterMode = rt.filterMode;
+            
+            Graphics.SetRenderTarget(rt);
+            result.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0, false);
+            Graphics.SetRenderTarget(null); 
+            
             return result;
         }
 
