@@ -36,6 +36,9 @@ namespace PhysicalSky
         public IAtmosphereModel Atmosphere { get { return m_Atmosphere; } set { m_Atmosphere = value as AtmosphereModel; } }
 
         [SerializeField]
+        private bool m_AutoRecomputeAtmosphere = true;
+
+        [SerializeField]
         private float m_StarBrightnessMultiplier = 1.0f;
         public float StarBrightnessMultiplier { get { return m_StarBrightnessMultiplier; } set { m_StarBrightnessMultiplier = Mathf.Max(value, 0.0f); } }
 
@@ -152,7 +155,7 @@ namespace PhysicalSky
                 return;
             }
 
-            if (m_Atmosphere.NeedsRecompute())
+            if (m_AutoRecomputeAtmosphere && m_Atmosphere.NeedsRecompute())
                 m_Atmosphere.Compute();
 
             if (!m_SunRadianceTexture)
