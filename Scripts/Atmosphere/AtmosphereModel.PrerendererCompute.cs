@@ -32,7 +32,7 @@ namespace PhysicalSky
 
             public static bool Supported()
             {
-                return SystemInfo.supportsComputeShaders;
+                return SystemInfo.supportsComputeShaders && TextureFactory.Supports3DTextures();
             }
 
             protected override void SetupPrerender(Vector3 lambdas, Matrix3x3 luminanceFromRadiance)
