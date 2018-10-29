@@ -51,6 +51,36 @@ namespace PhysicalSky.Utilities
             Blit3D(rtSetup, dest[0].volumeDepth, mat, pass);
         }
 
+        public static TextureFormat TextureFormatFromRenderTextureFormat(RenderTextureFormat rtf)
+        {
+            switch(rtf)
+            {
+                case RenderTextureFormat.ARGBHalf:
+                    return TextureFormat.RGBAHalf;
+                case RenderTextureFormat.ARGBFloat:
+                    return TextureFormat.RGBAFloat;
+                default:
+                    throw new System.NotImplementedException();
+            }
+        }
+
+        public static Texture2D Texture2DFromRenderTexture(RenderTexture rt)
+        {
+            Debug.Assert(rt.volumeDepth == 1);
+
+            Texture2D result = new Texture2D(
+                    rt.width,
+                    rt.height,
+                    TextureFormatFromRenderTextureFormat(rt.format),
+                    rt.useMipMap);
+
+            Graphics.SetRenderTarget(rt);
+            result.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0, false);
+            result.wrapMode = rt.wrapMode;
+            result.filterMode = rt.filterMode;
+            return result;
+        }
+
         public static void DumpTexture(RenderTexture rt, string path)
         {
             // Warning: doesn't seem to actually work with 3d textures
