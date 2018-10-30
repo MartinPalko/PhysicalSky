@@ -38,6 +38,10 @@ namespace PhysicalSky
 
         // Computed values
         private AtmosphereParameters m_computedParameters;
+        public AtmosphereParameters ComputedParameters
+        {
+            get { return m_computedParameters; }
+        }
         private ComputedRuntimeValues m_computedValues;
         // Computed textures
         private RenderTexture m_transmittanceLUT = null;
