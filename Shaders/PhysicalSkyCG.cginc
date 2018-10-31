@@ -1,7 +1,7 @@
 #ifndef PHYSICAL_SKY_CG
 #define PHYSICAL_SKY_CG
 
-#include "PhysicalSkyCommon.cginc"
+#include "AtmosphereLib.cginc"
 
 uniform TransmittanceTexture _transmittance_texture;
 uniform ScatteringTexture _scattering_texture;

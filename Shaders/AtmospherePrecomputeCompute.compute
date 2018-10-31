@@ -1,6 +1,6 @@
 ﻿
 #include "UnityCG.cginc"
-#include "PhysicalSkyCommon.cginc"
+#include "AtmosphereLib.cginc"
 
 uniform float4 _luminance_from_radiance[3];
 float3 LuminanceFromRadiance(float3 v)

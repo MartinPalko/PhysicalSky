@@ -1,4 +1,4 @@
-﻿Shader "Hidden/Precompute"
+﻿Shader "Hidden/AtmospherePrecomputeBlit"
 {
 	Properties {}
 	SubShader
@@ -14,7 +14,7 @@
 			#pragma fragment frag
 			
 			#include "UnityCG.cginc"
-			#include "PhysicalSkyCommon.cginc"
+			#include "AtmosphereLib.cginc"
 
 			float4 frag (v2f_img i) : COLOR
 			{
@@ -34,7 +34,7 @@
 			#pragma fragment frag
 
 			#include "UnityCG.cginc"
-			#include "PhysicalSkyCommon.cginc"
+			#include "AtmosphereLib.cginc"
 
 			uniform TransmittanceTexture transmittance_texture;
 
@@ -68,7 +68,7 @@
 
 			#include "UnityCG.cginc"
 			#include "Blit3d.cginc"
-			#include "PhysicalSkyCommon.cginc"
+			#include "AtmosphereLib.cginc"
 
 			uniform TransmittanceTexture transmittance_texture;
 
@@ -111,7 +111,7 @@
 
 			#include "UnityCG.cginc"
 			#include "Blit3d.cginc"
-			#include "PhysicalSkyCommon.cginc"
+			#include "AtmosphereLib.cginc"
 
 			uniform ScatteringTexture single_rayleigh_scattering_texture;
 			uniform ScatteringTexture single_mie_scattering_texture;
@@ -145,7 +145,7 @@
 
 			#include "UnityCG.cginc"
 			#include "Blit3d.cginc"
-			#include "PhysicalSkyCommon.cginc"
+			#include "AtmosphereLib.cginc"
 
 			uniform TransmittanceTexture transmittance_texture;
 			uniform ScatteringTexture single_rayleigh_scattering_texture;
@@ -186,7 +186,7 @@
 			#pragma fragment frag
 
 			#include "UnityCG.cginc"
-			#include "PhysicalSkyCommon.cginc"
+			#include "AtmosphereLib.cginc"
 
 			uniform ScatteringTexture single_rayleigh_scattering_texture;
 			uniform ScatteringTexture single_mie_scattering_texture;
@@ -226,7 +226,7 @@
 			#pragma fragment frag
 
 			#include "UnityCG.cginc"
-			#include "PhysicalSkyCommon.cginc"
+			#include "AtmosphereLib.cginc"
 
 			uniform IrradianceTexture irradiance_texture;
 
@@ -252,7 +252,7 @@
 
 			#include "UnityCG.cginc"
 			#include "Blit3d.cginc"
-			#include "PhysicalSkyCommon.cginc"
+			#include "AtmosphereLib.cginc"
 
 			uniform TransmittanceTexture transmittance_texture;
 			uniform ScatteringDensityTexture scattering_density_texture;
@@ -290,7 +290,7 @@
 
 			#include "UnityCG.cginc"
 			#include "Blit3d.cginc"
-			#include "PhysicalSkyCommon.cginc"
+			#include "AtmosphereLib.cginc"
 
 			uniform ScatteringTexture multiple_scattering_texture;
 
