@@ -55,8 +55,8 @@
 * THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef PHYSICAL_SKY_COMMON
-#define PHYSICAL_SKY_COMMON
+#ifndef ATMOSPHERE_LIB
+#define ATMOSPHERE_LIB
 
 #define NO_TEXTURE3D // Always enabled for now, since texture3d support in Unity is spotty.
 
