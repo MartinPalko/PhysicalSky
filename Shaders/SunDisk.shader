@@ -23,7 +23,7 @@
 
 			fixed4 frag (v2f_img i) : COLOR
 			{
-				AtmosphereParameters params = GetAtmosphereParameters();
+				AtmosphereRenderParameters params = GetAtmosphereParameters();
 
 				// View rays, scaled to the size of the sun
 				float3 untransformedviewray = normalize(float3(i.uv * 2 - 1, -(1 / tan(sun_size.x))));

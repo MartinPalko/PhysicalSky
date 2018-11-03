@@ -25,7 +25,7 @@ uniform int scattering_order;
 	[numthreads(8,8,1)]
 	void MAIN(uint3 id : SV_DispatchThreadID)
 	{
-		AtmosphereParameters params = GetAtmosphereParameters();
+		AtmosphereRenderParameters params = GetAtmosphereParameters();
 
 		Result0[id.xy] = ComputeTransmittanceToTopAtmosphereBoundaryTexture(params, id.xy + 0.5);
 	}
@@ -43,7 +43,7 @@ uniform int scattering_order;
 	[numthreads(8,8,1)]
 	void MAIN(uint3 id : SV_DispatchThreadID)
 	{
-		AtmosphereParameters params = GetAtmosphereParameters();
+		AtmosphereRenderParameters params = GetAtmosphereParameters();
 
 		Result0[id.xy] = ComputeDirectIrradianceTexture(params, transmittance_texture, id.xy + 0.5);
 #ifndef ACCUMULATE
@@ -63,7 +63,7 @@ uniform int scattering_order;
 	[numthreads(8,8,1)]
 	void MAIN(uint3 id : SV_DispatchThreadID)
 	{
-		AtmosphereParameters params = GetAtmosphereParameters();
+		AtmosphereRenderParameters params = GetAtmosphereParameters();
 
 		float3 outRayleigh;
 		float3 outMie;
@@ -89,7 +89,7 @@ uniform int scattering_order;
 	[numthreads(8,8,1)]
 	void MAIN(uint3 id : SV_DispatchThreadID)
 	{
-		AtmosphereParameters params = GetAtmosphereParameters();
+		AtmosphereRenderParameters params = GetAtmosphereParameters();
 
 		Result0[id] = ComputeScatteringDensityTexture(
 			params,
@@ -112,7 +112,7 @@ uniform int scattering_order;
 	[numthreads(8,8,1)]
 	void MAIN(uint3 id : SV_DispatchThreadID)
 	{
-		AtmosphereParameters params = GetAtmosphereParameters();
+		AtmosphereRenderParameters params = GetAtmosphereParameters();
 
 		 float3 irradianceResult = ComputeIndirectIrradianceTexture(
 			params,
@@ -136,7 +136,7 @@ uniform int scattering_order;
 	[numthreads(8,8,1)]
 	void MAIN(uint3 id : SV_DispatchThreadID)
 	{
-		AtmosphereParameters params = GetAtmosphereParameters();
+		AtmosphereRenderParameters params = GetAtmosphereParameters();
 
 		float nu;
 		float3 deltaMultipleScatteringResult = ComputeMultipleScatteringTexture(

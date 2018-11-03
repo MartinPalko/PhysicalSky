@@ -65,7 +65,7 @@
 				OUT.pos.w = 1; // Translation is needed again for projection
 				OUT.pos = mul(UNITY_MATRIX_P, OUT.pos); // Project
 
-				AtmosphereParameters params = GetAtmosphereParameters();
+				AtmosphereRenderParameters params = GetAtmosphereParameters();
 
 				// Set color to 0 if we're below the horizon.
 				float angle = acos(dot(float3(0,-1,0), worldDirection)) * 2;

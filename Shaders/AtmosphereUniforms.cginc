@@ -37,9 +37,9 @@ DensityProfile ArrayToDensityProfile(float4 a[3])
 	return profile;
 }
 
-AtmosphereParameters GetAtmosphereParameters()
+AtmosphereRenderParameters GetAtmosphereParameters()
 {
-	AtmosphereParameters params;
+	AtmosphereRenderParameters params;
 
 	params.sky_spectral_radiance_to_luminance = _sky_spectral_radiance_to_luminance;
 	params.sun_spectral_radiance_to_luminance = _sun_spectral_radiance_to_luminance;

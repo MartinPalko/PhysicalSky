@@ -18,7 +18,7 @@
 
 			float4 frag (v2f_img i) : COLOR
 			{
-				AtmosphereParameters params = GetAtmosphereParameters();
+		AtmosphereRenderParameters params = GetAtmosphereParameters();
 				float3 result = ComputeTransmittanceToTopAtmosphereBoundaryTexture(params, i.pos.xy);
 				return float4(result.rgb, 1.0);
 			}
@@ -46,7 +46,7 @@
 
 			f2a frag (v2f_img i)
 			{
-				AtmosphereParameters params = GetAtmosphereParameters();
+				AtmosphereRenderParameters params = GetAtmosphereParameters();
 
 				float3 result = ComputeDirectIrradianceTexture(params, transmittance_texture, i.pos.xy);
 
@@ -81,7 +81,7 @@
 
 			f2a frag (v2f_img3d i)
 			{
-				AtmosphereParameters params = GetAtmosphereParameters();
+				AtmosphereRenderParameters params = GetAtmosphereParameters();
 
 				float3 uvw = float3(i.pos.xy, i.uvw.z * SCATTERING_TEXTURE_DEPTH);
 				float3 outRayleigh;
@@ -157,7 +157,7 @@
 
 			float4 frag (v2f_img3d i) : COLOR
 			{
-				AtmosphereParameters params = GetAtmosphereParameters();
+				AtmosphereRenderParameters params = GetAtmosphereParameters();
 
 				float3 uvw = float3(i.pos.xy, i.uvw.z * SCATTERING_TEXTURE_DEPTH);
 
@@ -197,7 +197,7 @@
 
 			float4 frag (v2f_img i) : COLOR
 			{
-				AtmosphereParameters params = GetAtmosphereParameters();
+				AtmosphereRenderParameters params = GetAtmosphereParameters();
 
 				int2 index = i.pos.xy;
 				float3 irradianceResult = ComputeIndirectIrradianceTexture(
@@ -259,7 +259,7 @@
 
 			float4 frag (v2f_img3d i) : COLOR
 			{
-				AtmosphereParameters params = GetAtmosphereParameters();
+				AtmosphereRenderParameters params = GetAtmosphereParameters();
 
 				float3 uvw = float3(i.pos.xy, i.uvw.z * SCATTERING_TEXTURE_DEPTH);
 
