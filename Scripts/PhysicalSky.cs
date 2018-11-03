@@ -123,6 +123,7 @@ namespace PhysicalSky
             // TEMP/HACK: When using luminance, values are much brighter than radiance.
             // Need a better solution to handle that.
             float luminanceCompensation = m_Atmosphere.ComputedParameters.luminance != AtmosphereParameters.LuminanceType.none ? 1e-05f : 1.0f;
+            luminanceCompensation /= Mathf.PI; // TODO: Nicer conversion from illuminance to luminance;
             m.SetFloat("sun_brightness", SunBrightnessMultiplier * luminanceCompensation);
 
             m.SetVector("camera", new Vector3(0, (m_Atmosphere.ComputedParameters.planetaryRadius / 1000) + m_Altitude, 0));
@@ -162,41 +163,15 @@ namespace PhysicalSky
             {
                 m_SunRadianceTexture = new Texture2D(SUN_RADIANCE_TEXTURE_SIZE, SUN_RADIANCE_TEXTURE_SIZE, TextureFormat.RGBAHalf, false, false);
             }
-
-            // Compute sun radiance, and apply to light
-            if (m_SunRadianceMaterial)
+            
             {
-                SetShaderUniforms(m_SunRadianceMaterial);
-                m_SunRadianceMaterial.SetMatrix("sun_rotation_matrix", transform.localToWorldMatrix);
-
-                RenderTexture temporary = RenderTexture.GetTemporary(SUN_RADIANCE_TEXTURE_SIZE, SUN_RADIANCE_TEXTURE_SIZE, 0, RenderTextureFormat.ARGBHalf);
-                RenderTexture.active = temporary;
-                Graphics.Blit(null, temporary, m_SunRadianceMaterial);
-                m_SunRadianceTexture.ReadPixels(new Rect(0, 0, SUN_RADIANCE_TEXTURE_SIZE, SUN_RADIANCE_TEXTURE_SIZE), 0, 0);
-                RenderTexture.active = null;
-                RenderTexture.ReleaseTemporary(temporary);
-
-                Color[] colors = m_SunRadianceTexture.GetPixels();
-
-                Color radianceSum = Color.black;
-                int nonZero = 0;
-
-                for (int i = 0; i < colors.Length; i++)
-                {
-                    radianceSum += colors[i];
-                    nonZero += colors[i] == Color.black ? 0 : 1;
-                }
-                Color averageRadiance = radianceSum / nonZero;
-                averageRadiance /= 3000; // Arbitrary value scales down to unity's lighting.
-                averageRadiance *= SunLightBrightnessMultiplier;
-
-                // Set directional sunlight based on average radiance.
-                {
-                    float hue, saturation, value;
-                    Color.RGBToHSV(averageRadiance, out hue, out saturation, out value);
-                    m_SunLight.intensity = value;
-                    m_SunLight.color = Color.HSVToRGB(hue, saturation * SunSaturationMultiplier, 1.0f).gamma;
-                }
+                float radius = m_Atmosphere.ComputedParameters.planetaryRadius / 1000;
+                float altitude = m_Altitude;
+                Color sunLuminance = Atmosphere.GetSunIlluminance(new Vector3(0, radius + altitude, 0), -m_SunLight.transform.forward);
+                float hue, saturation, value;
+                Color.RGBToHSV(sunLuminance, out hue, out saturation, out value);
+                m_SunLight.intensity = value * (m_Atmosphere.ComputedParameters.luminance != AtmosphereParameters.LuminanceType.none ? 1e-05f : 1.0f);
+                m_SunLight.color = Color.HSVToRGB(hue, saturation * SunSaturationMultiplier, 1.0f).gamma; // TODO: Why does this need the .gamma to seem right?
             }
 
             // Assign sky material as skybox.
