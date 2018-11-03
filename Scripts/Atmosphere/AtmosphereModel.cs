@@ -12,19 +12,6 @@ namespace PhysicalSky
     [CreateAssetMenu(fileName = "NewAtmosphereModel", menuName = "PhysicalSky/AtmosphereModel")]
     public partial class AtmosphereModel : ScriptableObject, IAtmosphereModel
     {
-        [Serializable]
-        private struct ComputedRuntimeValues
-        {
-            public float m_sunSolidAngle;
-            public Vector3 m_sky_k;
-            public Vector3 m_sun_k;
-            public Vector3 m_solarIrradiance;
-            public Vector3 m_rayleighScattering;
-            public Vector3 m_mieScattering;
-            public Vector3 m_mieExtinction;
-            public Vector3 m_absorptionExtinction;
-        }
-
         [SerializeField]
         private AtmosphereParameters m_parameters = AtmosphereParameters.defaultEarth;
         public AtmosphereParameters Parameters
@@ -46,8 +33,9 @@ namespace PhysicalSky
         {
             get { return m_computedParameters; }
         }
+
         [SerializeField] [HideInInspector]
-        private ComputedRuntimeValues m_computedValues;
+        private AtmosphereLib.AtmosphereRenderParams m_renderParams;
 
         // Temporary lookup textures output from the computation
         private RenderTexture m_transmittanceLUT = null;
@@ -148,20 +136,21 @@ namespace PhysicalSky
         private void SetShaderUniforms(GraphicsHelpers.IMaterialProperties m)
         {
             // TODO: Set only run-time required values here
+            // TODO: Set all from RenderValues
             m.SetTexture("_transmittance_texture", m_transmittanceLUT != null ? (Texture)m_transmittanceLUT : m_savedTransmittanceLUT);
             m.SetTexture("_scattering_texture", m_scatteringLUT != null ? (Texture)m_scatteringLUT : m_savedScatteringLUT);
             m.SetTexture("_irradiance_texture", m_irradianceLUT != null ? (Texture)m_irradianceLUT : m_savedIrradianceLUT);
-            m.SetVector("_sky_spectral_radiance_to_luminance", m_computedParameters.luminance != AtmosphereParameters.LuminanceType.none ? m_computedValues.m_sky_k : Vector3.one);
-            m.SetVector("_sun_spectral_radiance_to_luminance", m_computedParameters.luminance != AtmosphereParameters.LuminanceType.none ? m_computedValues.m_sun_k : Vector3.one);
-            m.SetVector("_solar_irradiance", m_computedValues.m_solarIrradiance);
+            m.SetVector("_sky_spectral_radiance_to_luminance", m_renderParams.sky_spectral_radiance_to_luminance);
+            m.SetVector("_sun_spectral_radiance_to_luminance", m_renderParams.sun_spectral_radiance_to_luminance);
+            m.SetVector("_solar_irradiance", m_renderParams.solar_irradiance);
             m.SetFloat("_sun_angular_radius", m_computedParameters.sunAngularRadius);
             m.SetFloat("_bottom_radius", m_computedParameters.planetaryRadius / Prerenderer.LENGTH_UNIT_IN_METERS);
             m.SetFloat("_top_radius", (m_computedParameters.planetaryRadius + m_computedParameters.atmosphereThickness) / Prerenderer.LENGTH_UNIT_IN_METERS);
-            m.SetVector("_rayleigh_scattering", m_computedValues.m_rayleighScattering);
-            m.SetVector("_mie_scattering", m_computedValues.m_mieScattering);
-            m.SetVector("_mie_extinction", m_computedValues.m_mieExtinction);
+            m.SetVector("_rayleigh_scattering", m_renderParams.rayleigh_scattering);
+            m.SetVector("_mie_scattering", m_renderParams.mie_scattering);
+            m.SetVector("_mie_extinction", m_renderParams.mie_extinction);
             m.SetFloat("_mie_phase_function_g", m_computedParameters.miePhaseFunctionG);
-            m.SetVector("_absorption_extinction", m_computedValues.m_absorptionExtinction);
+            m.SetVector("_absorption_extinction", m_renderParams.absorption_extinction);
             m.SetFloat("_mu_s_min", Mathf.Cos(m_computedParameters.maxSunZenithAngle));
             m.SetVector("sun_size", new Vector3(Mathf.Tan(m_computedParameters.sunAngularRadius), Mathf.Cos(m_computedParameters.sunAngularRadius), m_computedParameters.sunAngularRadius));
         }
@@ -194,7 +183,7 @@ namespace PhysicalSky
                     return false;
                 }
 
-                if (preRenderer.Compute(m_parameters, m_transmittanceLUT, m_scatteringLUT, m_irradianceLUT, ref m_computedValues))
+                if (preRenderer.Compute(m_parameters, m_transmittanceLUT, m_scatteringLUT, m_irradianceLUT, ref m_renderParams))
                 {
                     m_computedParameters = m_parameters;
 #if UNITY_EDITOR

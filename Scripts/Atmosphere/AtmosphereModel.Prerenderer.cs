@@ -404,7 +404,7 @@ namespace PhysicalSky
                     1.0f);
             }
 
-            public bool Compute(AtmosphereParameters parameters, RenderTexture transmittanceLUT, RenderTexture scatteringLUT, RenderTexture irradianceLUT, ref ComputedRuntimeValues computedValues)
+            public bool Compute(AtmosphereParameters parameters, RenderTexture transmittanceLUT, RenderTexture scatteringLUT, RenderTexture irradianceLUT, ref AtmosphereLib.AtmosphereRenderParams renderValues)
             {
 #if PHYSICAL_SKY_DEBUG
                 Debug.Log("Computing Atmospheric Lookup Textures");
@@ -550,14 +550,22 @@ namespace PhysicalSky
                 m_irradianceLUT = null;
 
                 // Assign to computed values
-                computedValues.m_sunSolidAngle = m_sunSolidAngle;
-                computedValues.m_sky_k = m_sky_k;
-                computedValues.m_sun_k = m_sun_k;
-                computedValues.m_solarIrradiance = ScaleToWavelengths(m_solarIrradiance, LAMBDA_V, 1.0f);
-                computedValues.m_rayleighScattering = ScaleToWavelengths(m_solarIrradiance, LAMBDA_V, LENGTH_UNIT_IN_METERS);
-                computedValues.m_mieScattering = ScaleToWavelengths(m_solarIrradiance, LAMBDA_V, LENGTH_UNIT_IN_METERS);
-                computedValues.m_mieExtinction = ScaleToWavelengths(m_solarIrradiance, LAMBDA_V, LENGTH_UNIT_IN_METERS);
-                computedValues.m_absorptionExtinction = ScaleToWavelengths(m_solarIrradiance, LAMBDA_V, LENGTH_UNIT_IN_METERS);
+                renderValues.sky_spectral_radiance_to_luminance = parameters.luminance != AtmosphereParameters.LuminanceType.none ? m_sky_k : Vector3.one;
+                renderValues.sun_spectral_radiance_to_luminance = parameters.luminance != AtmosphereParameters.LuminanceType.none ? m_sun_k : Vector3.one;
+                renderValues.solar_irradiance = ScaleToWavelengths(m_solarIrradiance, LAMBDA_V, 1.0f);
+                renderValues.sun_angular_radius = parameters.sunAngularRadius;
+                renderValues.bottom_radius = m_parameters.planetaryRadius / LENGTH_UNIT_IN_METERS;
+                renderValues.top_radius = (m_parameters.planetaryRadius + m_parameters.atmosphereThickness) / LENGTH_UNIT_IN_METERS;
+                renderValues.rayleigh_density = m_rayleighDensity;
+                renderValues.rayleigh_scattering = ScaleToWavelengths(m_rayleighScattering, LAMBDA_V, LENGTH_UNIT_IN_METERS);
+                renderValues.mie_density = m_mieDensity;
+                renderValues.mie_scattering = ScaleToWavelengths(m_mieScattering, LAMBDA_V, LENGTH_UNIT_IN_METERS);
+                renderValues.mie_extinction = ScaleToWavelengths(m_mieExtinction, LAMBDA_V, LENGTH_UNIT_IN_METERS);
+                renderValues.mie_phase_function_g = parameters.miePhaseFunctionG;
+                renderValues.absorption_density = m_absorptionDensity;
+                renderValues.absorption_extinction = ScaleToWavelengths(m_absorptionExtinction, LAMBDA_V, LENGTH_UNIT_IN_METERS);
+                renderValues.ground_albedo = new Vector3(parameters.groundAlbedo, parameters.groundAlbedo, parameters.groundAlbedo);
+                renderValues.mu_s_min = parameters.maxSunZenithAngle;
 
 #if PHYSICAL_SKY_DEBUG
                 float timerEndCompute = Time.realtimeSinceStartup;
