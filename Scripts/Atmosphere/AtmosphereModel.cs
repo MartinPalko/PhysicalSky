@@ -37,10 +37,33 @@ namespace PhysicalSky
         [SerializeField] [HideInInspector]
         private AtmosphereLib.AtmosphereRenderParams m_renderParams;
 
-        // Temporary lookup textures output from the computation
-        private RenderTexture m_transmittanceLUT = null;
-        private RenderTexture m_scatteringLUT = null;
-        private RenderTexture m_irradianceLUT = null;
+        // Temporary lookup render textures output from the computation
+        private RenderTexture m_gpuTransmittanceLUT = null;
+        private RenderTexture m_gpuScatteringLUT = null;
+        private RenderTexture m_gpuIrradianceLUT = null;
+
+        // CPU accessible transmittance lookup texture
+        private Texture2D m_cpuTransmittanceLUT = null;
+        private Texture2D GetCPUTransmittanceLUT()
+        {
+            if (m_savedTransmittanceLUT)
+            {
+                return m_savedTransmittanceLUT;
+            }
+            else if (m_cpuTransmittanceLUT)
+            {
+                return m_cpuTransmittanceLUT;
+            }
+            else if (m_gpuTransmittanceLUT)
+            {
+                m_cpuTransmittanceLUT = Utilities.GraphicsHelpers.Texture2DFromRenderTexture(m_gpuTransmittanceLUT);
+                return m_cpuTransmittanceLUT;
+            }
+            else
+            {
+                return null;
+            }
+        }
 
         private enum SerializeTextureMethod
         {
@@ -113,9 +136,9 @@ namespace PhysicalSky
 
             if (m_serializeTextures != SerializeTextureMethod.DontSerialize)
             {
-                m_savedTransmittanceLUT = SaveTexture(m_transmittanceLUT, "TransmittanceLUT");
-                m_savedScatteringLUT = SaveTexture(m_scatteringLUT, "ScatteringLUT");
-                m_savedIrradianceLUT = SaveTexture(m_irradianceLUT, "IrradianceLUT");
+                m_savedTransmittanceLUT = SaveTexture(m_gpuTransmittanceLUT, "TransmittanceLUT");
+                m_savedScatteringLUT = SaveTexture(m_gpuScatteringLUT, "ScatteringLUT");
+                m_savedIrradianceLUT = SaveTexture(m_gpuIrradianceLUT, "IrradianceLUT");
             }
 
             AssetDatabase.SaveAssets();
@@ -137,9 +160,9 @@ namespace PhysicalSky
         {
             // TODO: Set only run-time required values here
             // TODO: Set all from RenderValues
-            m.SetTexture("_transmittance_texture", m_transmittanceLUT != null ? (Texture)m_transmittanceLUT : m_savedTransmittanceLUT);
-            m.SetTexture("_scattering_texture", m_scatteringLUT != null ? (Texture)m_scatteringLUT : m_savedScatteringLUT);
-            m.SetTexture("_irradiance_texture", m_irradianceLUT != null ? (Texture)m_irradianceLUT : m_savedIrradianceLUT);
+            m.SetTexture("_transmittance_texture", m_gpuTransmittanceLUT != null ? (Texture)m_gpuTransmittanceLUT : m_savedTransmittanceLUT);
+            m.SetTexture("_scattering_texture", m_gpuScatteringLUT != null ? (Texture)m_gpuScatteringLUT : m_savedScatteringLUT);
+            m.SetTexture("_irradiance_texture", m_gpuIrradianceLUT != null ? (Texture)m_gpuIrradianceLUT : m_savedIrradianceLUT);
             m.SetVector("_sky_spectral_radiance_to_luminance", m_renderParams.sky_spectral_radiance_to_luminance);
             m.SetVector("_sun_spectral_radiance_to_luminance", m_renderParams.sun_spectral_radiance_to_luminance);
             m.SetVector("_solar_irradiance", m_renderParams.solar_irradiance);
@@ -183,7 +206,7 @@ namespace PhysicalSky
                     return false;
                 }
 
-                if (preRenderer.Compute(m_parameters, m_transmittanceLUT, m_scatteringLUT, m_irradianceLUT, ref m_renderParams))
+                if (preRenderer.Compute(m_parameters, m_gpuTransmittanceLUT, m_gpuScatteringLUT, m_gpuIrradianceLUT, ref m_renderParams))
                 {
                     m_computedParameters = m_parameters;
 #if UNITY_EDITOR
@@ -191,7 +214,7 @@ namespace PhysicalSky
 
                     if (m_serializeTextures != SerializeTextureMethod.DontSerialize)
                     {
-                        ReleaseRenderTextures();
+                        ReleaseTextures();
                     }
 
                     EditorUtility.SetDirty(this);
@@ -211,31 +234,37 @@ namespace PhysicalSky
 #if PHYSICAL_SKY_DEBUG
             Debug.Log("Released Atmosphere Resources");
 #endif
-            ReleaseRenderTextures();
+            ReleaseTextures();
             m_computedParameters = new AtmosphereParameters();
         }
 
         private void AllocateRenderTextures()
         {
-            TextureFactory.CreateRenderTexture(ref m_transmittanceLUT, TextureFactory.Preset.Transmittance);
-            TextureFactory.CreateRenderTexture(ref m_irradianceLUT, TextureFactory.Preset.Irradiance);
-            TextureFactory.CreateRenderTexture(ref m_scatteringLUT, TextureFactory.Preset.Scattering);
+            TextureFactory.CreateRenderTexture(ref m_gpuTransmittanceLUT, TextureFactory.Preset.Transmittance);
+            TextureFactory.CreateRenderTexture(ref m_gpuIrradianceLUT, TextureFactory.Preset.Irradiance);
+            TextureFactory.CreateRenderTexture(ref m_gpuScatteringLUT, TextureFactory.Preset.Scattering);
         }
 
-        private void ReleaseRenderTextures()
+        private void ReleaseTextures()
         {
-            TextureFactory.ReleaseRenderTexture(ref m_transmittanceLUT);
-            TextureFactory.ReleaseRenderTexture(ref m_irradianceLUT);
-            TextureFactory.ReleaseRenderTexture(ref m_scatteringLUT);
+            TextureFactory.ReleaseRenderTexture(ref m_gpuTransmittanceLUT);
+            TextureFactory.ReleaseRenderTexture(ref m_gpuIrradianceLUT);
+            TextureFactory.ReleaseRenderTexture(ref m_gpuScatteringLUT);
+
+            if (m_cpuTransmittanceLUT)
+            {
+                Destroy(m_cpuTransmittanceLUT);
+                m_cpuTransmittanceLUT = null;
+            }
         }
 
         public bool TexturesInvalid()
         {
-            if (m_savedIrradianceLUT == null && (m_transmittanceLUT == null || !m_transmittanceLUT.IsCreated()))
+            if (m_savedIrradianceLUT == null && (m_gpuTransmittanceLUT == null || !m_gpuTransmittanceLUT.IsCreated()))
                 return true;
-            else if (m_savedScatteringLUT == null && (m_scatteringLUT == null || !m_scatteringLUT.IsCreated()))
+            else if (m_savedScatteringLUT == null && (m_gpuScatteringLUT == null || !m_gpuScatteringLUT.IsCreated()))
                 return true;
-            else if (m_savedIrradianceLUT == null && (m_irradianceLUT == null || !m_irradianceLUT.IsCreated()))
+            else if (m_savedIrradianceLUT == null && (m_gpuIrradianceLUT == null || !m_gpuIrradianceLUT.IsCreated()))
                 return true;
             else
                 return false;
@@ -244,6 +273,14 @@ namespace PhysicalSky
         private void OnDestroy()
         {
             ReleaseResources();
+        }
+
+        public Color GetSunIlluminance(Vector3 positionRelativePlanetCenter, Vector3 sunDirection)
+        {
+            if (HasComputedData())
+                return AtmosphereLib.GetSunIlluminance(m_renderParams, GetCPUTransmittanceLUT(), positionRelativePlanetCenter, sunDirection);
+            else
+                return Color.black;
         }
     }
 }
