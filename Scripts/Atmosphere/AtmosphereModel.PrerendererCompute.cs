@@ -56,13 +56,13 @@ namespace PhysicalSky
                 m_computeShader.SetFloat("_sun_angular_radius", m_parameters.sunAngularRadius);
                 m_computeShader.SetFloat("_bottom_radius", m_parameters.planetaryRadius / LENGTH_UNIT_IN_METERS);
                 m_computeShader.SetFloat("_top_radius", (m_parameters.planetaryRadius + m_parameters.atmosphereThickness) / LENGTH_UNIT_IN_METERS);
-                m_computeShader.SetVectorArray("_rayleigh_density", m_rayleighDensity.GetShaderValues());
+                m_computeShader.SetVectorArray("_rayleigh_density", GetDensityProfileShaderValues(m_rayleighDensity));
                 m_computeShader.SetVector("_rayleigh_scattering", ScaleToWavelengths(m_rayleighScattering, lambdas, LENGTH_UNIT_IN_METERS));
-                m_computeShader.SetVectorArray("_mie_density", m_mieDensity.GetShaderValues());
+                m_computeShader.SetVectorArray("_mie_density", GetDensityProfileShaderValues(m_mieDensity));
                 m_computeShader.SetVector("_mie_scattering", ScaleToWavelengths(m_mieScattering, lambdas, LENGTH_UNIT_IN_METERS));
                 m_computeShader.SetVector("_mie_extinction", ScaleToWavelengths(m_mieExtinction, lambdas, LENGTH_UNIT_IN_METERS));
                 m_computeShader.SetFloat("_mie_phase_function_g", m_parameters.miePhaseFunctionG);
-                m_computeShader.SetVectorArray("_absorption_density", m_absorptionDensity.GetShaderValues());
+                m_computeShader.SetVectorArray("_absorption_density", GetDensityProfileShaderValues(m_absorptionDensity));
                 m_computeShader.SetVector("_absorption_extinction", ScaleToWavelengths(m_absorptionExtinction, lambdas, LENGTH_UNIT_IN_METERS));
                 m_computeShader.SetVector("_ground_albedo", Vector3.one * m_parameters.groundAlbedo);
                 m_computeShader.SetFloat("_mu_s_min", Mathf.Cos(m_parameters.maxSunZenithAngle));

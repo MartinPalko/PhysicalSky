@@ -66,81 +66,24 @@ namespace PhysicalSky
     {
         private abstract class Prerenderer
         {
-            // Matches that in PhysicalSkyCommon.cginc
-            protected struct DensityProfileLayer
+            protected static Vector4[] GetDensityProfileShaderValues(AtmosphereLib.DensityProfile dp)
             {
-                public float width;
-                public float exp_term;
-                public float exp_scale;
-                public float linear_term;
-                public float constant_term;
-
-                public DensityProfileLayer(float width, float exp_term, float exp_scale, float linear_term, float constant_term)
-                {
-                    this.width = width;
-                    this.exp_term = exp_term;
-                    this.exp_scale = exp_scale;
-                    this.linear_term = linear_term;
-                    this.constant_term = constant_term;
-                }
-
-                public static bool operator ==(DensityProfileLayer x, DensityProfileLayer y)
-                {
-                    return x.width == y.width &&
-                        x.exp_term == y.exp_term &&
-                        x.exp_scale == y.exp_scale &&
-                        x.linear_term == y.linear_term &&
-                        x.constant_term == y.constant_term;
-                }
-                public static bool operator !=(DensityProfileLayer x, DensityProfileLayer y) { return !x.Equals(y); }
-                public override bool Equals(object obj) { return obj is DensityProfileLayer && this == (DensityProfileLayer)obj; }
-                public override int GetHashCode() { return width.GetHashCode() ^ exp_term.GetHashCode() ^ exp_scale.GetHashCode() ^ linear_term.GetHashCode() ^ constant_term.GetHashCode(); }
-            };
-
-            protected struct DensityProfile
-            {
-                public DensityProfileLayer layer0;
-                public DensityProfileLayer layer1;
-
-                public DensityProfile(DensityProfileLayer layer0, DensityProfileLayer layer1)
-                {
-                    this.layer0 = layer0;
-                    this.layer1 = layer1;
-                }
-
-                public DensityProfile(DensityProfileLayer layer)
-                {
-                    this.layer0 = layer;
-                    this.layer1 = layer;
-                }
-
-                public static bool operator ==(DensityProfile x, DensityProfile y)
-                {
-                    return x.layer0 == y.layer0 && x.layer1 == y.layer1;
-                }
-                public static bool operator !=(DensityProfile x, DensityProfile y) { return !x.Equals(y); }
-                public override bool Equals(object obj) { return obj is DensityProfile && this == (DensityProfile)obj; }
-                public override int GetHashCode() { return layer0.GetHashCode() ^ layer1.GetHashCode(); }
-
-                public Vector4[] GetShaderValues()
-                {
-                    return new Vector4[3] {
+                return new Vector4[3] {
                         new Vector4(
-                            layer0.width / LENGTH_UNIT_IN_METERS,
-                            layer0.exp_term,
-                            layer0.exp_scale * LENGTH_UNIT_IN_METERS,
-                            layer0.linear_term * LENGTH_UNIT_IN_METERS),
+                            dp.layer0.width / LENGTH_UNIT_IN_METERS,
+                            dp.layer0.exp_term,
+                            dp.layer0.exp_scale * LENGTH_UNIT_IN_METERS,
+                            dp.layer0.linear_term * LENGTH_UNIT_IN_METERS),
                         new Vector4(
-                            layer0.constant_term,
-                            layer1.width / LENGTH_UNIT_IN_METERS,
-                            layer1.exp_term,
-                            layer1.exp_scale * LENGTH_UNIT_IN_METERS),
+                            dp.layer0.constant_term,
+                            dp.layer1.width / LENGTH_UNIT_IN_METERS,
+                            dp.layer1.exp_term,
+                            dp.layer1.exp_scale * LENGTH_UNIT_IN_METERS),
                         new Vector4(
-                            layer1.linear_term * LENGTH_UNIT_IN_METERS,
-                            layer1.constant_term,
+                            dp.layer1.linear_term * LENGTH_UNIT_IN_METERS,
+                            dp.layer1.constant_term,
                             0,
                             0)};
-                }
             }
 
             protected AtmosphereParameters m_parameters;
@@ -148,9 +91,9 @@ namespace PhysicalSky
             protected float m_sunSolidAngle;
             protected Vector3 m_sky_k;
             protected Vector3 m_sun_k;
-            protected DensityProfile m_rayleighDensity;
-            protected DensityProfile m_mieDensity;
-            protected DensityProfile m_absorptionDensity;
+            protected AtmosphereLib.DensityProfile m_rayleighDensity;
+            protected AtmosphereLib.DensityProfile m_mieDensity;
+            protected AtmosphereLib.DensityProfile m_absorptionDensity;
 
             protected const int WAVELENGTH_STEP_SIZE = 10;
             protected const int WAVELENGTH_STEP_COUNT = ((LAMBDA_MAX - LAMBDA_MIN) / WAVELENGTH_STEP_SIZE) + 1;
@@ -490,17 +433,17 @@ namespace PhysicalSky
                     m_absorptionExtinction[i] = m_parameters.useOzone ? kMaxOzoneNumberDensity * OZONE_CROSS_SECTION[(l - LAMBDA_MIN) / 10] : 0.0f;
                 }
 
-                m_rayleighDensity = new DensityProfile(new DensityProfileLayer(0.0f, 1.0f, -1.0f / m_parameters.rayleighScaleHeight, 0.0f, 0.0f));
-                m_mieDensity = new DensityProfile(new DensityProfileLayer(0.0f, 1.0f, -1.0f / m_parameters.mieScaleHeight, 0.0f, 0.0f));
+                m_rayleighDensity = new AtmosphereLib.DensityProfile(new AtmosphereLib.DensityProfileLayer(0.0f, 1.0f, -1.0f / m_parameters.rayleighScaleHeight, 0.0f, 0.0f));
+                m_mieDensity = new AtmosphereLib.DensityProfile(new AtmosphereLib.DensityProfileLayer(0.0f, 1.0f, -1.0f / m_parameters.mieScaleHeight, 0.0f, 0.0f));
 
                 // Density profile increasing linearly from 0 to 1 between 10 and 25km, and
                 // decreasing linearly from 1 to 0 between 25 and 40km. This is an approximate
                 // profile from http://www.kln.ac.lk/science/Chemistry/Teaching_Resources/
                 // Documents/Introduction%20to%20atmospheric%20chemistry.pdf (page 10).
                 // (ozone density)
-                m_absorptionDensity = new DensityProfile(
-                    new DensityProfileLayer(25000.0f, 0.0f, 0.0f, 1.0f / 15000.0f, -2.0f / 3.0f),
-                    new DensityProfileLayer(0.0f, 0.0f, 0.0f, -1.0f / 15000.0f, 8.0f / 3.0f));
+                m_absorptionDensity = new AtmosphereLib.DensityProfile(
+                    new AtmosphereLib.DensityProfileLayer(25000.0f, 0.0f, 0.0f, 1.0f / 15000.0f, -2.0f / 3.0f),
+                    new AtmosphereLib.DensityProfileLayer(0.0f, 0.0f, 0.0f, -1.0f / 15000.0f, 8.0f / 3.0f));
 
                 m_numPrecomputedWavelengths = m_parameters.luminance == AtmosphereParameters.LuminanceType.precomputed ? 15 : 3;
 
